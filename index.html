@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FuturesForged — Algo Engine</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#060d14; --bg2:#0a1a26; --bg3:#0e2338;
+  --accent:#00d4ff; --accent2:#00ff88;
+  --danger:#ff3b5c; --warn:#ffb800;
+  --text:#c8dae8; --muted:#4a7a9b;
+  --border:#0e2a3a; --card:rgba(10,26,38,0.9);
+  --green:#22d08a; --red:#ff4c6e;
+}
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@600;700&display=swap');
+body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden;}
+
+/* ── LAUNCH ─────────────────────────────────────────── */
+#launch{position:fixed;inset:0;background:#020810;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;z-index:9999;transition:opacity 1s ease;overflow:hidden;}
+#launch.fade-out{opacity:0;pointer-events:none;}
+
+/* Starfield */
+.star-field{position:absolute;inset:0;overflow:hidden;}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--dur) infinite alternate;}
+@keyframes twinkle{0%{opacity:0.2;transform:scale(1);}100%{opacity:1;transform:scale(1.4);}}
+
+/* Space background gradient */
+.space-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,#0a1a3a 0%,#020810 60%);}
+
+/* Earth horizon at bottom */
+.horizon{position:absolute;bottom:0;left:0;right:0;height:180px;
+  background:linear-gradient(to top,#0d3a1a 0%,#0a2a14 30%,#071a0e 60%,transparent 100%);
+  border-top:1px solid rgba(0,255,100,0.15);}
+.horizon::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(0,255,136,0.4),transparent);}
+
+/* Launch pad platform */
+.pad-wrap{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;}
+.pad-platform{width:220px;height:18px;background:linear-gradient(to bottom,#2a3a4a,#1a2a3a);
+  border:1px solid #2a4a6a;border-radius:3px;position:relative;}
+.pad-platform::before{content:'';position:absolute;top:0;left:10%;right:10%;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(0,212,255,0.5),transparent);}
+.pad-leg{position:absolute;bottom:17px;width:6px;background:linear-gradient(to bottom,#2a4a6a,#1a2a3a);
+  border-radius:1px;transform-origin:bottom center;}
+.pad-leg.l1{left:55px;height:40px;transform:rotate(-12deg);}
+.pad-leg.l2{left:75px;height:50px;transform:rotate(-6deg);}
+.pad-leg.r1{right:55px;height:40px;transform:rotate(12deg);}
+.pad-leg.r2{right:75px;height:50px;transform:rotate(6deg);}
+.pad-arm-l{position:absolute;bottom:80px;left:-30px;width:35px;height:5px;
+  background:linear-gradient(to right,#1a2a3a,#2a4a6a);border-radius:2px;}
+.pad-arm-r{position:absolute;bottom:80px;right:-30px;width:35px;height:5px;
+  background:linear-gradient(to left,#1a2a3a,#2a4a6a);border-radius:2px;}
+
+/* Rocket SVG container */
+.rocket-svg-wrap{position:absolute;bottom:78px;left:50%;transform:translateX(-50%);
+  width:100px;animation:pre-launch 0.3s ease-in-out infinite alternate;
+  transform-origin:bottom center;}
+@keyframes pre-launch{0%{filter:drop-shadow(0 0 8px rgba(0,212,255,0.4));}
+  100%{filter:drop-shadow(0 0 20px rgba(0,212,255,0.8));}}
+
+/* Launch animation */
+.rocket-svg-wrap.launching{animation:launch-anim 3.5s ease-in forwards;}
+@keyframes launch-anim{
+  0%  {bottom:78px;opacity:1;transform:translateX(-50%) scale(1);}
+  8%  {bottom:60px;transform:translateX(-50%) scale(0.98);}  /* settle */
+  15% {bottom:120px;transform:translateX(-50%) scale(1.02);}
+  100%{bottom:2000px;opacity:0;transform:translateX(-50%) scale(0.3);}
+}
+
+/* Exhaust flame */
+.exhaust{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);
+  width:32px;opacity:0;pointer-events:none;}
+.exhaust.burning{animation:exhaust-grow 3.5s ease-in forwards;}
+@keyframes exhaust-grow{
+  0%  {opacity:0;height:20px;}
+  10% {opacity:1;height:60px;}
+  30% {opacity:1;height:120px;}
+  80% {opacity:0.6;height:200px;}
+  100%{opacity:0;height:300px;}
+}
+.exhaust-inner{width:100%;border-radius:0 0 50% 50%;
+  background:linear-gradient(to bottom,#fff 0%,#ffdd00 15%,#ff6600 35%,#ff2200 60%,transparent 100%);
+  animation:flicker-ex 0.05s infinite alternate;height:100%;}
+@keyframes flicker-ex{0%{transform:scaleX(0.9) scaleY(1);}100%{transform:scaleX(1.1) scaleY(1.05);}}
+.exhaust-outer{position:absolute;top:30%;left:-60%;width:220%;border-radius:0 0 50% 50%;
+  background:radial-gradient(ellipse,rgba(255,100,0,0.4) 0%,transparent 70%);
+  animation:flicker-ex2 0.08s infinite alternate;height:100%;}
+@keyframes flicker-ex2{0%{transform:scaleX(0.8);}100%{transform:scaleX(1.2);}}
+
+/* Smoke clouds */
+.smoke{position:absolute;bottom:58px;left:50%;pointer-events:none;opacity:0;}
+.smoke.puffing{animation:smoke-puff 3.5s ease-out forwards;}
+@keyframes smoke-puff{
+  0%  {opacity:0;transform:translateX(-50%) scale(0.2);}
+  15% {opacity:0.7;transform:translateX(-50%) scale(1);}
+  50% {opacity:0.4;transform:translateX(-50%) translateY(-20px) scale(2.5);}
+  100%{opacity:0;transform:translateX(-50%) translateY(-80px) scale(5);}
+}
+.smoke-ball{width:80px;height:50px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(180,200,200,0.8),rgba(120,140,150,0.3),transparent);
+  filter:blur(8px);}
+
+/* Countdown ring */
+.countdown-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:160px;height:160px;opacity:0;transition:opacity 0.5s;}
+.countdown-ring.visible{opacity:1;}
+.countdown-num{font-family:'Rajdhani',sans-serif;font-size:72px;font-weight:700;
+  color:var(--accent);text-align:center;line-height:160px;
+  text-shadow:0 0 30px #00d4ff,0 0 60px #00d4ff;
+  animation:count-pulse 1s ease-in-out;}
+@keyframes count-pulse{0%{transform:scale(1.4);opacity:0;}50%{transform:scale(1);opacity:1;}100%{transform:scale(0.8);opacity:0;}}
+
+/* Title below rocket */
+.launch-title{font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;
+  letter-spacing:8px;color:var(--accent);margin-bottom:8px;
+  text-shadow:0 0 20px rgba(0,212,255,0.6);position:relative;z-index:2;}
+.launch-sub{font-size:11px;letter-spacing:4px;color:var(--muted);margin-bottom:28px;position:relative;z-index:2;}
+.progress-bar{width:260px;height:2px;background:rgba(14,42,58,0.8);border-radius:2px;overflow:hidden;position:relative;z-index:2;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;}
+.launch-status{font-size:10px;color:var(--muted);margin-top:12px;letter-spacing:3px;
+  animation:blink 0.8s infinite;position:relative;z-index:2;margin-bottom:30px;}
+@keyframes blink{50%{opacity:0.2;}}
+
+/* ── APP ────────────────────────────────────────────── */
+#app{display:none;min-height:100vh;}
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(1px 1px at 20% 30%,rgba(0,212,255,0.4) 0%,transparent 100%),radial-gradient(1px 1px at 80% 10%,rgba(0,255,136,0.3) 0%,transparent 100%),radial-gradient(1px 1px at 50% 70%,rgba(0,212,255,0.2) 0%,transparent 100%),radial-gradient(1px 1px at 10% 80%,rgba(255,255,255,0.2) 0%,transparent 100%);}
+.wrap{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:20px;}
+
+/* ── HEADER ─────────────────────────────────────────── */
+header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:24px;}
+.logo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:22px;letter-spacing:4px;color:var(--accent);}
+.logo span{color:var(--text);}
+.header-right{display:flex;align-items:center;gap:16px;}
+.time-badge{font-size:12px;color:var(--muted);border:1px solid var(--border);padding:4px 12px;}
+.feed-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px;transition:background 0.3s;}
+.feed-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green);}
+.nav-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;padding:6px 14px;cursor:pointer;transition:all 0.2s;}
+.nav-btn:hover,.nav-btn.active{border-color:var(--accent);color:var(--accent);}
+
+/* ── TABS ───────────────────────────────────────────── */
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* ── GRID ───────────────────────────────────────────── */
+.grid-top{display:grid;grid-template-columns:1fr 1fr 2fr;gap:16px;margin-bottom:16px;}
+.grid-bottom{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-news{display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+/* Accounts compact tile + fullscreen modal (Module 2) */
+.manage-accts-btn{display:block;width:100%;text-align:center;margin-top:12px;padding:8px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.25);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;cursor:pointer;}
+.manage-accts-btn:hover{background:rgba(0,212,255,0.14);}
+.ff-modal-overlay{position:fixed;inset:0;background:rgba(2,8,16,0.92);z-index:1000;display:none;flex-direction:column;}
+.ff-modal-overlay.open{display:flex;}
+.ff-modal-header{background:#040b10;border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+.ff-modal-title{font-family:'Rajdhani',sans-serif;font-size:16px;letter-spacing:4px;color:var(--accent);}
+.ff-modal-close{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;padding:6px 14px;cursor:pointer;}
+.ff-modal-close:hover{border-color:var(--danger);color:var(--danger);}
+.ff-modal-body{flex:1;overflow-y:auto;padding:24px;}
+.ff-firm-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap;}
+.ff-firm-tab{padding:8px 16px;font-size:9px;letter-spacing:2px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;text-transform:uppercase;}
+.ff-firm-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.ff-acct-group-header{padding:5px 0;font-size:8px;letter-spacing:3px;color:#1e4060;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:4px;margin-top:10px;}
+.ff-stage-badge{font-size:8px;padding:2px 6px;border-radius:2px;}
+.ff-stage-eval{background:rgba(255,184,0,0.1);color:#ffb800;border:1px solid rgba(255,184,0,0.25);}
+.ff-stage-funded{background:rgba(34,208,138,0.1);color:#22d08a;border:1px solid rgba(34,208,138,0.25);}
+.ff-summary-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.ff-chip{padding:4px 12px;font-size:9px;letter-spacing:2px;border-radius:2px;background:var(--card);border:1px solid var(--border);}
+
+
+/* ── CARD ───────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);padding:18px;position:relative;overflow:hidden;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0.4;}
+.card-title{font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:3px;color:var(--muted);margin-bottom:14px;}
+.scan-line{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.3),transparent);animation:scan 4s linear infinite;pointer-events:none;}
+@keyframes scan{0%{top:-2px;}100%{top:100%;}}
+
+/* ── BUTTONS ────────────────────────────────────────── */
+.master-btn{width:100%;padding:16px;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:4px;border:2px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;transition:all 0.2s;margin-bottom:12px;}
+.master-btn:hover{background:var(--accent);color:var(--bg);}
+.master-btn.running{border-color:var(--green);color:var(--green);animation:pulse-border 2s infinite;}
+.master-btn.running:hover{background:var(--green);color:var(--bg);}
+@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(34,208,138,0);}50%{box-shadow:0 0 0 6px rgba(34,208,138,0.15);}}
+.estop-btn{width:100%;padding:10px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:3px;border:2px solid var(--danger);background:transparent;color:var(--danger);cursor:pointer;transition:all 0.2s;}
+.estop-btn:hover{background:var(--danger);color:#fff;}
+.estop-btn.active{background:var(--danger);color:#fff;animation:flash 0.5s infinite alternate;}
+@keyframes flash{from{opacity:1;}to{opacity:0.5;}}
+.status-row{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--muted);}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.status-dot.active{background:var(--green);box-shadow:0 0 6px var(--green);}
+.status-dot.danger{background:var(--danger);box-shadow:0 0 6px var(--danger);}
+
+/* ── TOGGLES ────────────────────────────────────────── */
+.strat-row,.acct-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.strat-row:last-child,.acct-row:last-child{border-bottom:none;}
+.strat-name,.acct-label{font-size:12px;letter-spacing:1px;}
+.strat-meta,.acct-instr{font-size:10px;color:var(--muted);margin-top:2px;}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.slider{position:absolute;inset:0;background:var(--border);border-radius:24px;cursor:pointer;transition:0.3s;}
+.slider:before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;left:3px;top:3px;background:var(--muted);transition:0.3s;}
+input:checked+.slider{background:rgba(0,212,255,0.2);border:1px solid var(--accent);}
+input:checked+.slider:before{transform:translateX(20px);background:var(--accent);box-shadow:0 0 8px var(--accent);}
+
+/* ── POSITION ───────────────────────────────────────── */
+.position-box{padding:14px;border:1px solid var(--border);background:rgba(0,0,0,0.3);min-height:70px;}
+.pos-direction{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;margin-bottom:4px;}
+.pos-direction.LONG{color:var(--green);}
+.pos-direction.SHORT{color:var(--red);}
+.pos-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:3px;}
+.pos-val{color:var(--text);}
+.flat-label{color:var(--muted);font-size:12px;letter-spacing:2px;}
+
+/* ── TABLES ─────────────────────────────────────────── */
+.signal-table,.log-table{width:100%;border-collapse:collapse;font-size:11px;}
+.signal-table th,.log-table th{text-align:left;padding:6px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);border-bottom:1px solid var(--border);}
+.signal-table td,.log-table td{padding:6px 10px;border-bottom:1px solid rgba(14,42,58,0.4);}
+.dir-long{color:var(--green);}
+.dir-short{color:var(--red);}
+.log-box{height:220px;overflow-y:auto;font-size:10px;line-height:1.8;padding:4px 0;}
+.log-box::-webkit-scrollbar{width:4px;}
+.log-box::-webkit-scrollbar-thumb{background:var(--border);}
+.log-line.WARN{color:var(--warn);}
+.log-line.ERROR{color:var(--red);}
+.log-line.INFO{color:var(--text);}
+.log-ts{color:var(--muted);margin-right:8px;}
+
+/* ── SIGNAL BADGES ──────────────────────────────────── */
+.badge{display:inline-block;padding:2px 7px;font-size:9px;letter-spacing:1px;border-radius:2px;font-family:'Rajdhani',sans-serif;font-weight:700;}
+.badge-executed{background:rgba(34,208,138,0.15);color:var(--green);border:1px solid rgba(34,208,138,0.4);}
+.badge-missed{background:rgba(255,184,0,0.12);color:var(--warn);border:1px solid rgba(255,184,0,0.3);}
+.badge-live{background:rgba(0,212,255,0.12);color:var(--accent);border:1px solid rgba(0,212,255,0.3);}
+.pnl-pos{color:var(--green);}
+.pnl-neg{color:var(--red);}
+.acct-rules{font-size:9px;color:var(--muted);margin-top:3px;line-height:1.6;}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.settings-form{display:flex;flex-direction:column;gap:12px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-label{font-size:10px;letter-spacing:2px;color:var(--muted);}
+.form-input,.form-select{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;padding:8px 10px;width:100%;transition:border-color 0.2s;}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--accent);}
+.form-select option{background:var(--bg2);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.save-btn{padding:10px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:3px;border:1px solid var(--accent2);background:transparent;color:var(--accent2);cursor:pointer;transition:all 0.2s;margin-top:4px;}
+.save-btn:hover{background:var(--accent2);color:var(--bg);}
+.del-btn{padding:6px 12px;font-size:11px;border:1px solid var(--danger);background:transparent;color:var(--danger);cursor:pointer;transition:all 0.2s;font-family:'Share Tech Mono',monospace;}
+.del-btn:hover{background:var(--danger);color:#fff;}
+.acct-card-settings{border:1px solid var(--border);padding:14px;margin-bottom:10px;position:relative;}
+.acct-card-settings .acct-card-name{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:var(--accent);margin-bottom:8px;}
+.acct-card-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:2px 0;}
+.acct-card-val{color:var(--text);}
+.section-label{font-family:'Rajdhani',sans-serif;font-size:13px;letter-spacing:3px;color:var(--accent);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.add-btn{width:100%;padding:10px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;border:1px dashed var(--muted);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.2s;margin-top:8px;}
+.add-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+.msg-ok{color:var(--green);font-size:11px;letter-spacing:1px;}
+.msg-err{color:var(--red);font-size:11px;letter-spacing:1px;}
+
+footer{text-align:center;font-size:10px;color:var(--muted);padding:20px 0 10px;letter-spacing:2px;}
+.feed-dot.market-closed{background:var(--warn);box-shadow:0 0 8px var(--warn);}
+
+</style>
+<script>window._BOT_TOKEN="";</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  /* hide only the engine power controls (clients don't drive the master engine) */
+  #master-btn, #estop-btn, #local-trade-btn { display:none !important; }
+  .locktag { font-size:8px;letter-spacing:1px;color:#f0a500;border:1px solid rgba(240,165,0,.45);padding:1px 6px;border-radius:4px;white-space:nowrap;cursor:default; }
+  body[data-theme="light"] { --bg:#eef3f7; --bg2:#ffffff; --bg3:#eef5fa; --text:#13212b; --muted:#5b7387; --border:#d3e0ea; --card:rgba(255,255,255,0.96); }
+  #license-gate { position:fixed;inset:0;z-index:99999;background:#060d14;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif; }
+  /* launch: keep the flame on the rocket, and the green horizon line behind it */
+  .horizon { z-index:0; }
+  .pad-wrap { z-index:1; }
+  .smoke { z-index:2; }
+  #rocket-svg-wrap { z-index:5; }
+  #exhaust { bottom:auto !important; top:85% !important; }
+</style>
+</head>
+<body>
+<div id="license-gate">
+  <div style="width:340px;background:#0a1a26;border:1px solid #0e2a3a;border-radius:14px;padding:28px;text-align:center">
+    <div style="font-size:22px;font-weight:700;letter-spacing:2px;color:#c8dae8">FUTURES<span style="color:#00d4ff">FORGED</span></div>
+    <div style="font-size:11px;color:#4a7a9b;margin:6px 0 18px">Enter your license key to activate</div>
+    <input id="lic-key" placeholder="FF-XXXXXXXX-XXXXXXXX" autocomplete="off" style="width:100%;padding:11px;border-radius:8px;border:1px solid #0e2a3a;background:#060d14;color:#c8dae8;font-family:monospace;letter-spacing:1px;text-align:center;text-transform:uppercase">
+    <button onclick="gateActivate()" style="width:100%;margin-top:12px;padding:11px;border:0;border-radius:8px;background:#00d4ff;color:#04141c;font-weight:700;letter-spacing:1px;cursor:pointer">ACTIVATE</button>
+    <div id="lic-msg" style="font-size:11px;color:#ff4c6e;margin-top:10px;min-height:16px"></div>
+    <div style="font-size:10px;color:#4a7a9b;margin-top:14px">Find your key in your <a href="https://futuresforged.com/portal.html" target="_blank" style="color:#00d4ff">customer portal</a></div>
+  </div>
+</div>
+
+<!-- ══ LAUNCH ═══════════════════════════════════════════ -->
+<div id="launch">
+  <div class="space-bg"></div>
+
+  <!-- Starfield -->
+  <div class="star-field" id="star-field"></div>
+
+  <!-- Countdown ring (hidden until T-3) -->
+  <div class="countdown-ring" id="countdown-ring">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- Smoke -->
+  <div class="smoke" id="smoke"><div class="smoke-ball"></div></div>
+
+
+  <!-- Launch Pad -->
+  <div class="pad-wrap" id="pad-wrap">
+    <div class="pad-leg l1"></div>
+    <div class="pad-leg l2"></div>
+    <div class="pad-leg r1"></div>
+    <div class="pad-leg r2"></div>
+    <div class="pad-arm-l"></div>
+    <div class="pad-arm-r"></div>
+    <div class="pad-platform"></div>
+  </div>
+
+  <!-- Rocket SVG -->
+  <div class="rocket-svg-wrap" id="rocket-svg-wrap">
+    <svg viewBox="0 0 100 240" xmlns="http://www.w3.org/2000/svg" width="100" height="240">
+      <defs>
+        <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#d0dde8"/>
+          <stop offset="40%" style="stop-color:#f0f4f8"/>
+          <stop offset="70%" style="stop-color:#c8d4de"/>
+          <stop offset="100%" style="stop-color:#a0b0be"/>
+        </linearGradient>
+        <linearGradient id="noseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#b0c0ce"/>
+          <stop offset="50%" style="stop-color:#e8f0f8"/>
+          <stop offset="100%" style="stop-color:#90a0ae"/>
+        </linearGradient>
+        <linearGradient id="engineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#4a6a8a"/>
+          <stop offset="100%" style="stop-color:#1a2a3a"/>
+        </linearGradient>
+        <linearGradient id="finGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#1a3a5a"/>
+          <stop offset="100%" style="stop-color:#0a2a4a"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Engine nozzle -->
+      <ellipse cx="50" cy="226" rx="14" ry="5" fill="#0a1a2a"/>
+      <path d="M36 210 Q50 228 64 210 L60 198 Q50 206 40 198 Z" fill="url(#engineGrad)"/>
+      <ellipse cx="50" cy="198" rx="10" ry="4" fill="#1a3a5a"/>
+
+      <!-- Fins — left -->
+      <path d="M36 185 L10 215 L22 210 L36 195 Z" fill="url(#finGrad)" stroke="#0a2040" stroke-width="0.5"/>
+      <path d="M36 185 L10 215 L10 205 L36 188 Z" fill="#0a2a4a" opacity="0.6"/>
+
+      <!-- Fins — right -->
+      <path d="M64 185 L90 215 L78 210 L64 195 Z" fill="url(#finGrad)" stroke="#0a2040" stroke-width="0.5"/>
+      <path d="M64 185 L90 215 L90 205 L64 188 Z" fill="#0a2a4a" opacity="0.6"/>
+
+      <!-- Main body -->
+      <rect x="32" y="60" width="36" height="148" rx="4" fill="url(#bodyGrad)"/>
+
+      <!-- Body detail lines -->
+      <line x1="38" y1="60" x2="38" y2="208" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+      <line x1="62" y1="60" x2="62" y2="208" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+      <!-- Panel seams -->
+      <line x1="32" y1="120" x2="68" y2="120" stroke="rgba(0,0,0,0.12)" stroke-width="0.8"/>
+      <line x1="32" y1="160" x2="68" y2="160" stroke="rgba(0,0,0,0.10)" stroke-width="0.8"/>
+
+      <!-- US Flag -->
+      <rect x="36" y="68" width="28" height="18" rx="1" fill="#002868"/>
+      <!-- Red stripes -->
+      <rect x="36" y="68" width="28" height="2" fill="#BF0A30"/>
+      <rect x="36" y="72" width="28" height="2" fill="#BF0A30"/>
+      <rect x="36" y="76" width="28" height="2" fill="#BF0A30"/>
+      <rect x="36" y="80" width="28" height="2" fill="#BF0A30"/>
+      <rect x="36" y="84" width="28" height="2" fill="#BF0A30"/>
+      <!-- Blue canton -->
+      <rect x="36" y="68" width="12" height="10" fill="#002868"/>
+      <!-- Stars (simplified) -->
+      <text x="37" y="76" font-size="4" fill="white" letter-spacing="1.2">★★★</text>
+      <text x="38.5" y="72" font-size="4" fill="white" letter-spacing="1.5">★★</text>
+      <!-- White stripes overlay -->
+      <rect x="36" y="70" width="28" height="1" fill="white" opacity="0.9"/>
+      <rect x="36" y="74" width="28" height="1" fill="white" opacity="0.9"/>
+      <rect x="36" y="78" width="28" height="1" fill="white" opacity="0.9"/>
+      <rect x="36" y="82" width="28" height="1" fill="white" opacity="0.9"/>
+
+      <!-- FF Logo panel -->
+      <rect x="36" y="92" width="28" height="28" rx="2" fill="rgba(0,20,40,0.7)" stroke="rgba(0,212,255,0.5)" stroke-width="0.8"/>
+      <!-- FF text -->
+      <text x="50" y="111" font-family="Arial Black,sans-serif" font-size="14" font-weight="900"
+            fill="#00d4ff" text-anchor="middle" filter="url(#glow)"
+            style="letter-spacing:-1px">FF</text>
+      <!-- Accent line under FF -->
+      <line x1="39" y1="114" x2="61" y2="114" stroke="#00ff88" stroke-width="0.8" opacity="0.7"/>
+
+      <!-- Window porthole -->
+      <circle cx="50" cy="140" r="8" fill="#0a1a2a" stroke="#4a8aaa" stroke-width="1.5"/>
+      <circle cx="50" cy="140" r="6" fill="#0d2a4a"/>
+      <circle cx="50" cy="140" r="5" fill="none" stroke="rgba(0,212,255,0.3)" stroke-width="0.5"/>
+      <!-- Window glint -->
+      <circle cx="47" cy="137" r="2" fill="rgba(255,255,255,0.15)"/>
+
+      <!-- Nose cone -->
+      <path d="M32 60 Q32 20 50 4 Q68 20 68 60 Z" fill="url(#noseGrad)"/>
+      <path d="M38 60 Q38 28 50 14 Q50 14 50 14" stroke="rgba(255,255,255,0.2)" stroke-width="0.5" fill="none"/>
+
+      <!-- Nose tip glow -->
+      <circle cx="50" cy="6" r="3" fill="rgba(0,212,255,0.6)" filter="url(#glow)"/>
+
+      <!-- RCS thrusters -->
+      <rect x="30" y="100" width="4" height="6" rx="1" fill="#2a4a6a"/>
+      <rect x="66" y="100" width="4" height="6" rx="1" fill="#2a4a6a"/>
+      <rect x="30" y="150" width="4" height="6" rx="1" fill="#2a4a6a"/>
+      <rect x="66" y="150" width="4" height="6" rx="1" fill="#2a4a6a"/>
+
+      <!-- Body highlight -->
+      <rect x="60" y="62" width="3" height="144" rx="1.5" fill="rgba(255,255,255,0.12)"/>
+    </svg>
+    <div class="exhaust" id="exhaust"><div class="exhaust-outer"></div><div class="exhaust-inner"></div></div>
+  </div>
+
+  <!-- Ground horizon -->
+  <div class="horizon"></div>
+
+  <!-- Text below -->
+  <div class="launch-title">FUTURESFORGED</div>
+  <div class="launch-sub">INSTITUTIONAL ALGO ENGINE v2.0</div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="launch-status" id="launch-status">INITIALIZING SYSTEMS...</div>
+</div>
+
+<!-- ══ APP ══════════════════════════════════════════════ -->
+<div id="app">
+<div class="stars"></div>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div>
+      <div class="logo">FUTURES<span>FORGED</span> // v2.0</div>
+      <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-top:4px;">INSTITUTIONAL ALGO ENGINE · NQ + ES · MFFU APPROVED</div>
+    </div>
+    <div class="header-right">
+      <button class="nav-btn active" onclick="showTab('dashboard',this)">DASHBOARD</button>
+      <button class="nav-btn" onclick="showTab('copier',this)">📋 COPIER</button>
+      <button class="nav-btn" onclick="showTab('propfirms',this)">🏢 PROP FIRMS</button>
+      <button class="nav-btn" onclick="showTab('settings',this)">⚙ SETTINGS</button>
+      <div>
+        <span class="feed-dot" id="feed-dot"></span>
+        <span style="font-size:11px;color:var(--muted);" id="feed-label">CONNECTING...</span>
+      </div>
+      <div class="time-badge" id="time-utc">--:--:-- UTC</div>
+    </div>
+  </header>
+
+  <!-- ── DASHBOARD TAB ────────────────────────────────── -->
+  <div id="tab-dashboard" class="tab-content active">
+
+    <div class="grid-top">
+
+      <!-- Master Control -->
+      <div class="card">
+        <div class="scan-line"></div>
+        <div class="card-title">⚡ MASTER CONTROL</div>
+        <button class="master-btn" id="master-btn" onclick="toggleRun()">▶ START BOT</button>
+        <button class="estop-btn" id="estop-btn" onclick="emergencyStop()">⛔ EMERGENCY STOP</button>
+        <button class="estop-btn" id="local-trade-btn" onclick="toggleLocalTrading()"
+                style="margin-top:8px;border-color:#5a6a7a;color:#9ab;">⏻ TRADE LOCAL ACCOUNT</button>
+        <button class="master-btn" id="master-control-chart-btn" onclick="window.open('studio.html','_blank')" style="border-color:var(--accent2);color:var(--accent2);margin-top:8px;">📈 CHART STUDIO</button>
+        <div class="status-row">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-label">IDLE</span>
+        </div>
+      </div>
+
+      <!-- Strategies -->
+      <div class="card">
+        <div class="scan-line"></div>
+        <div class="card-title">📡 STRATEGIES</div>
+        <div id="strategy-list"></div>
+      </div>
+
+      <!-- Accounts + Positions -->
+      <div class="card">
+        <div class="scan-line"></div>
+        <div class="card-title">🏦 ACCOUNTS &amp; POSITIONS</div>
+        <div id="accts-tile-body">
+          <div style="color:var(--muted);font-size:10px;">Loading…</div>
+        </div>
+        <button class="manage-accts-btn" onclick="openAccountsModal()">MANAGE ACCOUNTS →</button>
+      </div>
+
+    </div>
+
+    <div class="grid-news">
+      <div class="card" id="news-blackout-card">
+        <div class="scan-line"></div>
+        <div class="card-title">📅 NEWS BLACKOUT</div>
+        <div id="news-status-indicator"></div>
+        <div id="news-event-list"></div>
+      </div>
+      <div class="card" id="mini-chart-card" style="grid-column:span 2;">
+        <div class="scan-line"></div>
+        <div class="card-title">📈 LIVE CHART <span id="mini-chart-sym" style="font-size:9px;color:var(--muted);margin-left:8px;">NQ · 1m</span></div>
+        <div id="mini-chart" style="width:100%;height:190px;"></div>
+      </div>
+    </div>
+
+    <div class="grid-bottom">
+
+        <div class="card">
+          <div class="scan-line"></div>
+          <div class="card-title">📊 RECENT SIGNALS <span id="replay-label" style="font-size:9px;color:var(--muted);margin-left:8px;"></span></div>
+          <div style="overflow-x:auto;">
+            <table class="signal-table">
+              <thead>
+                <tr>
+                  <th>STATUS</th><th>DATE</th><th>TIME</th><th>STRAT</th>
+                  <th>DIR</th><th>ENTRY</th><th>STOP</th><th>TP</th>
+                  <th>R:R</th><th>SIM P&L</th>
+                </tr>
+              </thead>
+              <tbody id="signal-tbody">
+                <tr><td colspan="10" style="color:var(--muted);text-align:center;padding:20px;">Loading signals...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      <!-- Log -->
+      <div class="card">
+        <div class="scan-line"></div>
+        <div class="card-title">🖥️ EVENT LOG</div>
+        <div class="log-box" id="log-box">
+          <div class="log-line INFO"><span class="log-ts">--:--:--</span>Waiting for engine...</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /dashboard tab -->
+  <!-- ── COPIER TAB ──────────────────────────────────────── -->
+  <style>
+    #tab-copier .cp-grid{display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start}
+    #tab-copier .cp-estop{padding:8px 16px;font-size:12px;font-weight:700;letter-spacing:2px;border:2px solid var(--red);background:transparent;color:var(--red);cursor:pointer}
+    #tab-copier .cp-estop:hover,#tab-copier .cp-estop.on{background:var(--red);color:#fff}
+    #tab-copier .cp-btn{background:transparent;border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:5px 10px;cursor:pointer}
+    #tab-copier .cp-btn:hover{border-color:var(--accent);color:var(--accent)}
+    #tab-copier .cp-btn.acc{border-color:var(--accent);color:var(--accent)}
+    #tab-copier .cp-group{border:1px solid var(--border);margin-bottom:12px;padding:12px}
+    #tab-copier .cp-group.off{opacity:.5}
+    #tab-copier .cp-ghead{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+    #tab-copier .cp-gname{font-size:14px;font-weight:700;color:var(--accent);background:transparent;border:none;border-bottom:1px dashed transparent;outline:none;font-family:'Share Tech Mono',monospace;width:120px}
+    #tab-copier .cp-gname:focus{border-bottom-color:var(--border)}
+    #tab-copier .cp-grow{flex:1}
+    #tab-copier .cp-tag{font-size:8px;letter-spacing:1.5px;padding:2px 6px}
+    #tab-copier .cp-tag.m{background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.4);color:var(--accent2)}
+    #tab-copier .cp-tag.s{background:rgba(34,208,138,.12);border:1px solid rgba(34,208,138,.35);color:var(--green)}
+    #tab-copier .cp-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid rgba(14,42,58,.5);flex-wrap:wrap}
+    #tab-copier .cp-row:last-child{border-bottom:none}
+    #tab-copier .cp-sel,#tab-copier .cp-num{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 6px}
+    #tab-copier .cp-num{width:48px;text-align:center}
+    #tab-copier .cp-lbl{font-size:9px;color:var(--muted);letter-spacing:1px}
+    #tab-copier .cp-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+    #tab-copier .cp-chip{font-size:9px;letter-spacing:1px;padding:3px 8px;border:1px solid var(--border);cursor:pointer;color:var(--muted)}
+    #tab-copier .cp-chip.on{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.08)}
+    #tab-copier .cp-subhdr{font-size:9px;letter-spacing:2px;color:var(--muted);margin:8px 0 2px}
+    #tab-copier .cp-pill{font-size:8px;letter-spacing:1px;padding:2px 7px;border:1px solid var(--border);color:var(--muted);display:inline-block;margin:2px}
+    #tab-copier .cp-fl{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+    #tab-copier .cp-flab{font-size:9px;letter-spacing:2px;color:var(--muted)}
+    #tab-copier .cp-fin{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;padding:8px 10px;width:100%}
+    #tab-copier .cp-prev{background:var(--bg);border:1px solid var(--border);padding:10px;font-size:10px;margin-bottom:12px}
+    #tab-copier .cp-prow{display:flex;justify-content:space-between;padding:2px 0}
+    #tab-copier .cp-dir{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    #tab-copier .cp-buy,#tab-copier .cp-sell{padding:16px;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:3px;border:2px solid;background:transparent;cursor:pointer}
+    #tab-copier .cp-buy{border-color:var(--green);color:var(--green)}#tab-copier .cp-buy:hover{background:var(--green);color:var(--bg)}
+    #tab-copier .cp-sell{border-color:var(--red);color:var(--red)}#tab-copier .cp-sell:hover{background:var(--red);color:#fff}
+    #tab-copier .cp-sig{border:1px solid var(--border);padding:10px 12px;margin-bottom:8px}
+    #tab-copier .cp-sig.pending{border-left:3px solid var(--accent)}
+    #tab-copier .cp-sig.executed{border-left:3px solid var(--green);opacity:.85}
+    #tab-copier .cp-sig.denied{border-left:3px solid var(--muted);opacity:.5}
+    #tab-copier .cp-stop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    #tab-copier .cp-ssym{font-size:14px;font-weight:700}
+    #tab-copier .cp-sside{font-size:10px;font-weight:700;padding:2px 7px}
+    #tab-copier .cp-sside.LONG{background:rgba(34,208,138,.15);color:var(--green)}
+    #tab-copier .cp-sside.SHORT{background:rgba(255,76,110,.15);color:var(--red)}
+    #tab-copier .cp-sstrat{font-size:9px;color:var(--muted);border:1px solid var(--border);padding:2px 7px}
+    #tab-copier .cp-spx{display:flex;gap:14px;margin-top:6px;font-size:10px;flex-wrap:wrap}
+    #tab-copier .cp-spx b{color:var(--muted);font-weight:400}
+    #tab-copier .cp-sact{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+    #tab-copier .cp-acc2{background:rgba(34,208,138,.12);border:1px solid var(--green);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 14px;cursor:pointer}
+    #tab-copier .cp-acc2:hover{background:var(--green);color:var(--bg)}
+    #tab-copier .cp-deny{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 14px;cursor:pointer}
+    #tab-copier .cp-deny:hover{color:var(--red);border-color:var(--red)}
+    #tab-copier .cp-lock{font-size:10px;color:#ffb800}
+    #tab-copier .cp-stat{font-size:10px;font-weight:700}
+    #tab-copier .cp-stat.executed{color:var(--green)}#tab-copier .cp-stat.denied{color:var(--muted)}
+    #tab-copier .cp-log{height:200px;overflow-y:auto;font-size:10px;line-height:1.8}
+    #tab-copier .cp-ll.WARN{color:#ffb800}#tab-copier .cp-ll.INFO{color:var(--text)}
+    #tab-copier .cp-ts{color:var(--muted);margin-right:8px}
+    #tab-copier .cp-oitem{border-bottom:1px solid rgba(14,42,58,.5);padding:7px 0;font-size:10px}
+    #tab-copier .cp-mc{color:var(--muted);font-size:11px;text-align:center;padding:14px}
+    #tab-copier .cp-wh{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.15);padding:10px;font-size:9px;color:var(--muted);line-height:1.7}
+    #tab-copier .cp-wh .u{color:var(--accent);word-break:break-all}
+    #tab-copier .cp-offline{background:rgba(255,76,110,.08);border:1px solid var(--red);color:var(--red);padding:10px;font-size:11px;margin-bottom:14px;display:none}
+  </style>
+  <div id="tab-copier" class="tab-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--accent);letter-spacing:3px;">TRADE COPIER</div>
+      <button class="cp-estop" id="cp-estop" onclick="cp.estop()">EMERGENCY FLATTEN ALL</button>
+    </div>
+    <div class="cp-offline" id="cp-offline">Copier engine not detected on localhost:7332. Start the copier app (FuturesForgedCopier) to use this tab.</div>
+    <div class="cp-grid">
+      <div>
+        <div class="card"><div class="card-title">SIGNAL INBOX <span class="cp-lbl" id="cp-inbox-count"></span></div><div id="cp-inbox"><div class="cp-mc">Waiting for signals...</div></div></div>
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">TRADING GROUPS
+            <span><button class="cp-btn" onclick="cp.addStrat()">+ STRAT</button> <button class="cp-btn acc" onclick="cp.addGroup()">+ GROUP</button></span>
+          </div>
+          <div id="cp-groups"></div>
+        </div>
+        <div class="card"><div class="card-title">UNASSIGNED ACCOUNTS</div><div id="cp-unassigned" class="cp-mc">-</div></div>
+        <div class="card"><div class="card-title">ORDER HISTORY</div><div id="cp-orders"><div class="cp-mc">No orders yet</div></div></div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">MANUAL ORDER ENTRY</div>
+          <div class="cp-fl"><div class="cp-flab">GROUP (MASTER)</div><select class="cp-fin" id="cp-o-group" onchange="cp.preview()"></select></div>
+          <div class="cp-fl"><div class="cp-flab">INSTRUMENT</div><select class="cp-fin" id="cp-o-instr" onchange="cp.preview()"></select></div>
+          <div class="cp-fl"><div class="cp-flab">ORDER TYPE</div><select class="cp-fin" id="cp-o-type"><option>Market</option><option>Limit</option><option>Stop Market</option></select></div>
+          <div class="cp-fl"><div class="cp-flab">BASE CONTRACTS (MASTER)</div><input type="number" class="cp-fin" id="cp-o-qty" value="2" min="1" max="50" onchange="cp.preview()"></div>
+          <div class="cp-prev" id="cp-preview"></div>
+          <div class="cp-dir"><button class="cp-buy" onclick="cp.order('LONG')">BUY / LONG</button><button class="cp-sell" onclick="cp.order('SHORT')">SELL / SHORT</button></div>
+        </div>
+        <div class="card"><div class="card-title">BOT / TRADINGVIEW</div><div class="cp-wh">Bot &amp; TradingView post here, fanning out to every group subscribed to the tag:<div class="u">http://localhost:7332/webhook/tradingview</div></div></div>
+        <div class="card"><div class="card-title">EVENT LOG</div><div class="cp-log" id="cp-logbox"></div></div>
+      </div>
+    </div>
+  </div><!-- /copier tab -->
+
+
+  <!-- ── SETTINGS TAB ─────────────────────────────────── -->
+  <div id="tab-settings" class="tab-content">
+    <div class="settings-grid">
+
+      <!-- Left: Account List -->
+      <div>
+        <div class="card">
+          <div class="scan-line"></div>
+          <div class="card-title">🏦 CONFIGURED ACCOUNTS</div>
+          <div id="settings-acct-list"></div>
+          <button class="add-btn" onclick="showAddForm()">+ ADD NEW ACCOUNT</button>
+        </div>
+      </div>
+
+      <!-- Right: Add / Edit Form -->
+      <div>
+        <div class="card" id="acct-form-card">
+          <div class="scan-line"></div>
+          <div class="card-title" id="form-card-title">➕ ADD ACCOUNT</div>
+
+          <div class="settings-form">
+            <input type="hidden" id="f-edit-id">
+
+            <div class="form-group">
+              <div class="form-label">DISPLAY LABEL</div>
+              <input class="form-input" id="f-label" placeholder="e.g. MFF 25K Rapid">
+            </div>
+
+            <div class="form-group">
+              <div class="form-label">TRADOVATE ACCOUNT NAME (exact match)</div>
+              <input class="form-input" id="f-tradovate-id" placeholder="e.g. APEX-12345 or account name">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <div class="form-label">INSTRUMENT</div>
+                <select class="form-select" id="f-instrument">
+                  <option value="MNQ">MNQ</option>
+                  <option value="NQ">NQ</option>
+                  <option value="MES">MES</option>
+                  <option value="ES">ES</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <div class="form-label">EXIT STRUCTURE</div>
+                <select class="form-select" id="f-exit-structure" onchange="toggleRunnerField()">
+                  <option value="tp_runner">TP + Runner</option>
+                  <option value="single">Single Target</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <div class="form-label">TP CONTRACTS</div>
+                <input class="form-input" id="f-tp-contracts" type="number" min="1" max="10" value="1">
+              </div>
+              <div class="form-group" id="runner-field">
+                <div class="form-label">RUNNER CONTRACTS</div>
+                <input class="form-input" id="f-runner-contracts" type="number" min="1" max="10" value="1">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <div class="form-label">SESSION START (UTC hour)</div>
+                <input class="form-input" id="f-session-start" type="number" min="0" max="23" value="13">
+              </div>
+              <div class="form-group">
+                <div class="form-label">SESSION END (UTC hour)</div>
+                <input class="form-input" id="f-session-end" type="number" min="0" max="23" value="17">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <div class="form-label">ATR MULT — STOP</div>
+                <input class="form-input" id="f-atr-stop" type="number" step="0.1" value="1.5">
+              </div>
+              <div class="form-group">
+                <div class="form-label">ATR MULT — TP</div>
+                <input class="form-input" id="f-atr-tp" type="number" step="0.1" value="1.3">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <div class="form-label">TRAIL POINTS (runner)</div>
+                <input class="form-input" id="f-trail-pts" type="number" step="0.5" value="5">
+              </div>
+              <div class="form-group">
+                <div class="form-label">MAX TRADES / DAY</div>
+                <input class="form-input" id="f-max-trades" type="number" min="1" max="10" value="1">
+              </div>
+            </div>
+
+            <div id="form-msg" style="min-height:18px;"></div>
+
+            <div style="display:flex;gap:10px;">
+              <button class="save-btn" style="flex:1;" onclick="saveAccount()">💾 SAVE ACCOUNT</button>
+              <button class="save-btn" style="flex:1;border-color:var(--muted);color:var(--muted);" onclick="clearForm()">✕ CANCEL</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /settings tab -->
+
+  <!-- ── PROP FIRMS TAB ──────────────────────────────────── -->
+  <div id="tab-propfirms" class="tab-content">
+    <div style="max-width:1100px;margin:0 auto;padding:24px 16px;">
+
+      <div style="margin-bottom:24px;">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--accent);letter-spacing:3px;">PROP FIRMS</div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-top:4px;">SUPPORTED PLATFORMS · CLICK TO PURCHASE EVALUATION</div>
+      </div>
+
+      <div id="propfirm-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px;">
+
+        <!-- MyFundedFutures -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:2px;margin-bottom:4px;">MyFundedFutures</div>
+          <div style="font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:12px;">EVAL + FUNDED</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Account Sizes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$50K</span>
+            <span style="font-size:10px;background:rgba(0,255,136,0.15);border:1px solid var(--accent2);color:var(--accent2);padding:3px 8px;border-radius:3px;">$100K ★</span>
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$150K</span>
+          </div>
+          <a href="https://myfundedfutures.com" target="_blank" style="display:block;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px;border-radius:4px;text-decoration:none;">PURCHASE EVAL →</a>
+        </div>
+
+        <!-- Apex Trader Funding -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:2px;margin-bottom:4px;">Apex Trader Funding</div>
+          <div style="font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:12px;">EVAL + FUNDED</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Account Sizes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$25K</span>
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--accent);color:var(--accent);padding:3px 8px;border-radius:3px;">$50K</span>
+            <span style="font-size:10px;background:rgba(0,255,136,0.15);border:1px solid var(--accent2);color:var(--accent2);padding:3px 8px;border-radius:3px;">$100K ★</span>
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$300K</span>
+          </div>
+          <a href="https://apextraderfunding.com" target="_blank" style="display:block;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px;border-radius:4px;text-decoration:none;">PURCHASE EVAL →</a>
+        </div>
+
+        <!-- Topstep -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:2px;">Topstep</div>
+            <span style="font-size:8px;background:rgba(255,184,0,0.15);border:1px solid var(--warn);color:var(--warn);padding:2px 6px;border-radius:3px;letter-spacing:1px;">EVAL ONLY</span>
+          </div>
+          <div style="font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:12px;">TRADING COMBINE</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Account Sizes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$50K</span>
+            <span style="font-size:10px;background:rgba(0,255,136,0.15);border:1px solid var(--accent2);color:var(--accent2);padding:3px 8px;border-radius:3px;">$100K ★</span>
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$150K</span>
+          </div>
+          <a href="https://topstep.com" target="_blank" style="display:block;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px;border-radius:4px;text-decoration:none;">PURCHASE EVAL →</a>
+        </div>
+
+        <!-- Earn2Trade -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:2px;margin-bottom:4px;">Earn2Trade</div>
+          <div style="font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:12px;">EVAL + FUNDED</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Account Sizes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$25K</span>
+            <span style="font-size:10px;background:rgba(0,255,136,0.15);border:1px solid var(--accent2);color:var(--accent2);padding:3px 8px;border-radius:3px;">$50K ★</span>
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$100K</span>
+          </div>
+          <a href="https://earn2trade.com" target="_blank" style="display:block;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px;border-radius:4px;text-decoration:none;">PURCHASE EVAL →</a>
+        </div>
+
+        <!-- Tradeify -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:2px;margin-bottom:4px;">Tradeify</div>
+          <div style="font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:12px;">EVAL + FUNDED</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Account Sizes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$25K</span>
+            <span style="font-size:10px;background:rgba(0,255,136,0.15);border:1px solid var(--accent2);color:var(--accent2);padding:3px 8px;border-radius:3px;">$50K ★</span>
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$100K</span>
+          </div>
+          <a href="https://tradeify.co" target="_blank" style="display:block;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px;border-radius:4px;text-decoration:none;">PURCHASE EVAL →</a>
+        </div>
+
+        <!-- Take Profit Trader -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:2px;margin-bottom:4px;">Take Profit Trader</div>
+          <div style="font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:12px;">EVAL + FUNDED</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Account Sizes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$25K</span>
+            <span style="font-size:10px;background:rgba(0,255,136,0.15);border:1px solid var(--accent2);color:var(--accent2);padding:3px 8px;border-radius:3px;">$50K ★</span>
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$100K</span>
+          </div>
+          <a href="https://takeprofittrader.com" target="_blank" style="display:block;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px;border-radius:4px;text-decoration:none;">PURCHASE EVAL →</a>
+        </div>
+
+        <!-- Leeloo Trading -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:2px;margin-bottom:4px;">Leeloo Trading</div>
+          <div style="font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:12px;">EVAL + FUNDED</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Account Sizes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$25K</span>
+            <span style="font-size:10px;background:rgba(0,255,136,0.15);border:1px solid var(--accent2);color:var(--accent2);padding:3px 8px;border-radius:3px;">$50K ★</span>
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$100K</span>
+          </div>
+          <a href="https://leelootrading.com" target="_blank" style="display:block;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px;border-radius:4px;text-decoration:none;">PURCHASE EVAL →</a>
+        </div>
+
+        <!-- BluSky -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:2px;margin-bottom:4px;">BluSky</div>
+          <div style="font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:12px;">EVAL + FUNDED</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Account Sizes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$25K</span>
+            <span style="font-size:10px;background:rgba(0,255,136,0.15);border:1px solid var(--accent2);color:var(--accent2);padding:3px 8px;border-radius:3px;">$50K ★</span>
+            <span style="font-size:10px;background:rgba(0,212,255,0.1);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;">$100K</span>
+          </div>
+          <a href="https://blusky.io" target="_blank" style="display:block;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px;border-radius:4px;text-decoration:none;">PURCHASE EVAL →</a>
+        </div>
+
+      </div><!-- /grid -->
+
+      <!-- Disclaimer -->
+      <div style="border-top:1px solid var(--border);padding-top:16px;font-size:9px;color:var(--muted);letter-spacing:1px;line-height:1.8;">
+        FUTURESFORGED IS NOT AFFILIATED WITH ANY PROP FIRM LISTED ABOVE. LINKS ARE PROVIDED FOR CONVENIENCE ONLY.
+        AFFILIATE LINKS MAY BE ADDED IN A FUTURE UPDATE. ALWAYS REVIEW A FIRM'S RULES BEFORE PURCHASING.
+      </div>
+
+    </div>
+  </div><!-- /propfirms tab -->
+
+  <footer>FUTURESFORGED — LICENSED SOFTWARE — NOT FOR REDISTRIBUTION</footer>
+
+</div><!-- .wrap -->
+<div class="ff-modal-overlay" id="accounts-modal">
+  <div class="ff-modal-header">
+    <span class="ff-modal-title">🏦 ACCOUNTS &amp; POSITIONS</span>
+    <button class="ff-modal-close" onclick="closeAccountsModal()">✕ CLOSE</button>
+  </div>
+  <div class="ff-modal-body">
+    <div class="ff-summary-chips" id="modal-summary-chips"></div>
+    <div class="ff-firm-tabs" id="modal-firm-tabs"></div>
+    <div id="modal-acct-list"></div>
+  </div>
+</div>
+</div><!-- #app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let appState   = {};
+let localAccts = {};   // locally managed accounts (settings)
+
+// ═══════════════════════════════════════════════════════════
+// LAUNCH SEQUENCE
+// Rocket ALWAYS launches on fixed timer — no waiting for backend.
+// Backend status updates the text/progress bar only.
+// Dashboard appears after rocket flies off regardless of backend state.
+// ═══════════════════════════════════════════════════════════
+
+// Starfield
+(function() {
+  const sf = document.getElementById("star-field");
+  for (let i = 0; i < 180; i++) {
+    const s = document.createElement("div");
+    s.className = "star";
+    const sz = Math.random() * 2.5 + 0.5;
+    s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*80}%;--dur:${(Math.random()*3+1).toFixed(1)}s;opacity:${Math.random()*0.6+0.1};animation-delay:${(Math.random()*3).toFixed(1)}s;`;
+    sf.appendChild(s);
+  }
+})();
+
+const stEl     = document.getElementById("launch-status");
+const progFill = document.getElementById("progress-fill");
+const rocket   = document.getElementById("rocket-svg-wrap");
+const exhaust  = document.getElementById("exhaust");
+const smoke    = document.getElementById("smoke");
+const cdRing   = document.getElementById("countdown-ring");
+const cdNum    = document.getElementById("countdown-num");
+
+// Inject shake keyframe
+const sk = document.createElement("style");
+sk.textContent = `@keyframes shake{0%,100%{transform:translateX(-50%);}25%{transform:translateX(calc(-50% - 3px));}75%{transform:translateX(calc(-50% + 3px));}}`;
+document.head.appendChild(sk);
+
+function setStatus(msg, pct) {
+  stEl.textContent = msg;
+  progFill.style.transition = "width 0.4s ease";
+  progFill.style.width = pct + "%";
+}
+
+// ── Poll backend for real status messages (cosmetic only) ──
+let _lastStep = 0;
+setInterval(async () => {
+  try {
+    const r = await fetch("/api/ready", {
+      headers: {"X-Bot-Token": window._BOT_TOKEN || ""}
+    });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.step && d.step > _lastStep && d.step < 8) {
+      _lastStep = d.step;
+      // Only update text during pre-countdown phase
+      if (!_countdownStarted && d.label) {
+        stEl.textContent = d.label;
+        progFill.style.width = Math.min(d.pct || 0, 80) + "%";
+      }
+    }
+  } catch(e) {}
+}, 600);
+
+// ── FIXED TIMER — rocket always launches at T+8.5s ──
+let _countdownStarted = false;
+
+// Phase 1: status cycling (0–5s)
+const earlyMsgs = [
+  [0,    "INITIALIZING SYSTEMS...",    5],
+  [1200, "CONNECTING TO TRADOVATE...", 25],
+  [2400, "ACCOUNTS DISCOVERED...",     50],
+  [3600, "STRATEGIES LOADED...",       70],
+  [4800, "ALL SYSTEMS GO",             82],
+];
+earlyMsgs.forEach(([t, msg, pct]) => {
+  setTimeout(() => {
+    if (!_countdownStarted) setStatus(msg, pct);
+  }, t);
+});
+
+// Phase 2: countdown starts at 5s
+function doCountdown(num, cb) {
+  cdRing.classList.add("visible");
+  cdNum.textContent = num;
+  cdNum.style.animation = "none";
+  void cdNum.offsetWidth;
+  cdNum.style.animation = "count-pulse 1s ease-in-out";
+  setTimeout(cb, 1000);
+}
+
+setTimeout(() => {
+  _countdownStarted = true;
+  setStatus("T-3...", 85);
+  doCountdown(3, () => {
+    setStatus("T-2...", 90);
+    doCountdown(2, () => {
+      setStatus("T-1...", 95);
+      doCountdown(1, () => {
+
+        // T-0 — IGNITION
+        cdRing.classList.remove("visible");
+        setStatus("IGNITION 🔥", 97);
+        exhaust.classList.add("burning");
+        smoke.classList.add("puffing");
+
+        setTimeout(() => {
+          // LIFTOFF
+          setStatus("LIFTOFF 🚀", 100);
+          rocket.classList.add("launching");
+          const pad = document.getElementById("pad-wrap");
+          if (pad) pad.style.animation = "shake 0.3s ease-in-out 3";
+
+          // Fade to dashboard 2.8s after liftoff
+          setTimeout(() => {
+            const l = document.getElementById("launch");
+            l.classList.add("fade-out");
+            setTimeout(() => {
+              l.style.display = "none";
+              document.getElementById("app").style.display = "block";
+              startPolling();
+              loadLocalAccounts();
+            }, 1000);
+          }, 2800);
+
+        }, 350); // ignition → liftoff
+      });
+    });
+  });
+}, 5000); // countdown starts at 5s
+
+// ═══════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════
+function showTab(name, btn) {
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + name).classList.add("active");
+  btn.classList.add("active");
+  if (name === "settings") renderSettingsAccounts();
+}
+
+// ═══════════════════════════════════════════════════════════
+// POLLING
+// ═══════════════════════════════════════════════════════════
+function startPolling() {
+  poll();
+  setInterval(poll, 1500);
+}
+
+async function poll() {
+  try { const st = await window.cloudState(); if (st) { appState = st; renderDashboard(); } } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD RENDER
+// ═══════════════════════════════════════════════════════════
+function renderDashboard() {
+  const s = appState;
+
+  document.getElementById("time-utc").textContent = (s.time_utc || "--:--:--") + " UTC";
+
+  const dot = document.getElementById("feed-dot");
+  const lbl = document.getElementById("feed-label");
+  if (s.feed_ok) {
+    dot.className = "feed-dot ok";
+    lbl.textContent = "LIVE FEED OK";
+  } else if (s.market_closed) {
+    dot.className = "feed-dot market-closed";
+    lbl.textContent = "MARKET CLOSED";
+  } else {
+    dot.className = "feed-dot";
+    lbl.textContent = "FEED OFFLINE";
+  }
+
+  // Current market session by UTC hour (the engine defines all sessions in UTC).
+  function currentSession() {
+    const h = new Date().getUTCHours();
+    if (h >= 13 && h < 21) return "NY SESSION";       // NY 13:00–21:00 UTC
+    if (h >= 8  && h < 13) return "LONDON SESSION";   // London 08:00–13:00 UTC
+    return "ASIAN SESSION";                            // 21:00–08:00 UTC (Sydney/Tokyo)
+  }
+  const STRAT_SESSION = {
+    sweep_reverse: "NY SESSION",     box_mr_london: "LONDON SESSION",
+    box_mr_power:  "POWER HOUR",     momentum_nq:   "NY SESSION",
+    momentum_es:   "NY SESSION",
+  };
+
+  const btn   = document.getElementById("master-btn");
+  const sdot  = document.getElementById("status-dot");
+  const slbl  = document.getElementById("status-label");
+  const estop = document.getElementById("estop-btn");
+
+  if (s.emergency_stop) {
+    btn.textContent = "⛔ STOPPED";
+    btn.className   = "master-btn";
+    estop.className = "estop-btn active";
+    sdot.className  = "status-dot danger";
+    slbl.textContent = "EMERGENCY STOP ACTIVE";
+  } else if (s.running) {
+    btn.textContent = "⏸ PAUSE BOT";
+    btn.className   = "master-btn running";
+    estop.className = "estop-btn";
+    sdot.className  = "status-dot active";
+    slbl.textContent = "RUNNING — " + currentSession();
+  } else {
+    btn.textContent = "▶ START BOT";
+    btn.className   = "master-btn";
+    estop.className = "estop-btn";
+    sdot.className  = "status-dot";
+    slbl.textContent = "IDLE";
+  }
+
+  // Local-account trading toggle — independent of signal generation/broadcast.
+  // ON = live real-money orders on the local account; OFF = signals only.
+  const ltBtn = document.getElementById("local-trade-btn");
+  if (ltBtn) {
+    if (s.local_trading) {
+      ltBtn.textContent      = "⏻ TRADING LOCAL: ON";
+      ltBtn.style.borderColor = "#d6a516";
+      ltBtn.style.background   = "#d6a516";
+      ltBtn.style.color        = "#1a1a1a";
+    } else {
+      ltBtn.textContent      = "⏻ TRADING LOCAL: OFF (signals only)";
+      ltBtn.style.borderColor = "#5a6a7a";
+      ltBtn.style.background   = "transparent";
+      ltBtn.style.color        = "#9ab";
+    }
+  }
+
+  // Strategies
+  const sl = document.getElementById("strategy-list");
+  if (s.strategies) {
+    sl.innerHTML = Object.entries(s.strategies).map(([id, st]) => `
+      <div class="strat-row">
+        <div>
+          <div class="strat-name">${st.label}</div>
+          <div class="strat-meta">${(STRAT_SESSION[id] || currentSession())} · 1/DAY · 2 MNQ</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" ${st.enabled ? "checked" : ""}
+            onchange="toggleStrategy('${id}')">
+          <span class="slider"></span>
+        </label>
+      </div>`).join("");
+  }
+
+  // Accounts — compact tile up front; full detail lives in the modal (Module 2)
+  window._ffAccounts = s.accounts || {};
+  window._ffPositions = s.positions || {};
+  updateAccountsTile(window._ffAccounts);
+  const _am = document.getElementById("accounts-modal");
+  if (_am && _am.classList.contains("open")) renderModalAccounts();
+
+  // News blackout (Module 1, frontend-only; lights up once /api/state sends `news`)
+  updateNewsWidget(s.news);
+
+  // Signals — with STATUS badge, date, sim P&L
+  const tbody = document.getElementById("signal-tbody");
+  if (s.signals && s.signals.length > 0) {
+    const replaySignals = s.signals.filter(sg => sg.replay);
+    const replayLbl = document.getElementById("replay-label");
+    if (replayLbl && replaySignals.length > 0) {
+      const rd = replaySignals[0].replay_date || "";
+      replayLbl.textContent = `• ${replaySignals.length} replayed from ${rd}`;
+    }
+    tbody.innerHTML = s.signals.map(sg => {
+      const dt      = sg.dt || "";
+      const date    = dt.slice(0, 10) || "--";
+      const time    = dt.slice(11, 19) || "--";
+      const cls     = sg.direction === "LONG" ? "dir-long" : "dir-short";
+      const status  = sg.status || (sg.prior ? "PRIOR" : "LIVE");
+      let badgeCls  = "badge-live";
+      if (status === "EXECUTED") badgeCls = "badge-executed";
+      else if (status === "MISSED") badgeCls = "badge-missed";
+      const pnl     = sg.sim_pnl != null ? sg.sim_pnl : null;
+      const pnlHtml = (window.RANK < 2)
+        ? `<span class="locktag" title="Upgrade to Pro to reveal P&L">🔒 PRO</span>`
+        : (pnl != null
+        ? `<span class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(0)}</span>`
+        : `<span style="color:var(--muted)">—</span>`);
+      return `<tr style="${sg.replay ? "opacity:0.82;" : ""}">
+        <td><span class="badge ${badgeCls}">${status}</span></td>
+        <td style="color:var(--muted);font-size:10px;">${date}</td>
+        <td>${time}</td>
+        <td style="font-size:10px;">${sg.strategy || "--"}</td>
+        <td class="${cls}">${sg.direction}</td>
+        <td>${sg.entry}</td>
+        <td style="color:var(--red)">${sg.stop_price || "--"}</td>
+        <td style="color:var(--green)">${sg.tp_price || "--"}</td>
+        <td>${sg.rr || "--"}</td>
+        <td>${pnlHtml}</td>
+      </tr>`;
+    }).join("");
+  } else {
+    tbody.innerHTML = `<tr><td colspan="10" style="color:var(--muted);text-align:center;padding:20px;">Waiting for signal replay...</td></tr>`;
+  }
+
+  // Log
+  const lb = document.getElementById("log-box");
+  if (s.log && s.log.length > 0) {
+    lb.innerHTML = s.log.map(l =>
+      `<div class="log-line ${l.level}"><span class="log-ts">${l.ts}</span>${esc(l.msg)}</div>`
+    ).join("");
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SETTINGS — LOCAL ACCOUNT MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function loadLocalAccounts() {
+  try {
+    const saved = localStorage.getItem("nq_bot_accounts");
+    if (saved) localAccts = JSON.parse(saved);
+  } catch(e) {}
+}
+
+function saveLocalAccounts() {
+  localStorage.setItem("nq_bot_accounts", JSON.stringify(localAccts));
+}
+
+function renderSettingsAccounts() {
+  const el = document.getElementById("settings-acct-list");
+  const keys = Object.keys(localAccts);
+  if (!keys.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:11px;padding:10px 0;">No accounts configured yet.</div>`;
+    return;
+  }
+  el.innerHTML = keys.map(id => {
+    const a = localAccts[id];
+    const tp = a.exit_structure === "tp_runner"
+      ? `TP×${a.sizing.tp} + Runner×${a.sizing.runner}`
+      : `Single×${a.sizing.contracts}`;
+    return `
+      <div class="acct-card-settings">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div class="acct-card-name">${a.label}</div>
+          <div style="display:flex;gap:6px;">
+            <button class="del-btn" onclick="editAccount('${id}')">EDIT</button>
+            <button class="del-btn" onclick="deleteAccount('${id}')">DEL</button>
+          </div>
+        </div>
+        <div class="acct-card-row"><span>TRADOVATE ID</span><span class="acct-card-val">${a.id}</span></div>
+        <div class="acct-card-row"><span>INSTRUMENT</span><span class="acct-card-val">${a.instrument}</span></div>
+        <div class="acct-card-row"><span>SIZING</span><span class="acct-card-val">${tp}</span></div>
+        <div class="acct-card-row"><span>SESSION</span><span class="acct-card-val">${a.session.start_utc}:00–${a.session.end_utc}:00 UTC</span></div>
+        <div class="acct-card-row"><span>STOP ATR×</span><span class="acct-card-val">${a.risk.atr_multiplier_stop}</span></div>
+        <div class="acct-card-row"><span>TP ATR×</span><span class="acct-card-val">${a.risk.atr_multiplier_tp}</span></div>
+        <div class="acct-card-row"><span>TRAIL PTS</span><span class="acct-card-val">${a.risk.trail_pts}</span></div>
+        <div class="acct-card-row"><span>MAX/DAY</span><span class="acct-card-val">${a.max_trades_per_day}</span></div>
+      </div>`;
+  }).join("");
+}
+
+function showAddForm() {
+  clearForm();
+  document.getElementById("form-card-title").textContent = "➕ ADD ACCOUNT";
+}
+
+function clearForm() {
+  document.getElementById("f-edit-id").value       = "";
+  document.getElementById("f-label").value          = "";
+  document.getElementById("f-tradovate-id").value   = "";
+  document.getElementById("f-instrument").value     = "MNQ";
+  document.getElementById("f-exit-structure").value = "tp_runner";
+  document.getElementById("f-tp-contracts").value   = "1";
+  document.getElementById("f-runner-contracts").value = "1";
+  document.getElementById("f-session-start").value  = "13";
+  document.getElementById("f-session-end").value    = "17";
+  document.getElementById("f-atr-stop").value       = "1.5";
+  document.getElementById("f-atr-tp").value         = "1.3";
+  document.getElementById("f-trail-pts").value      = "5";
+  document.getElementById("f-max-trades").value     = "1";
+  document.getElementById("form-msg").innerHTML     = "";
+  document.getElementById("form-card-title").textContent = "➕ ADD ACCOUNT";
+  toggleRunnerField();
+}
+
+function toggleRunnerField() {
+  const es = document.getElementById("f-exit-structure").value;
+  document.getElementById("runner-field").style.display =
+    es === "tp_runner" ? "" : "none";
+}
+
+function editAccount(id) {
+  const a = localAccts[id];
+  if (!a) return;
+  document.getElementById("f-edit-id").value         = id;
+  document.getElementById("f-label").value            = a.label;
+  document.getElementById("f-tradovate-id").value     = a.id;
+  document.getElementById("f-instrument").value       = a.instrument;
+  document.getElementById("f-exit-structure").value   = a.exit_structure;
+  document.getElementById("f-tp-contracts").value     = a.sizing.tp || 1;
+  document.getElementById("f-runner-contracts").value = a.sizing.runner || 1;
+  document.getElementById("f-session-start").value    = a.session.start_utc;
+  document.getElementById("f-session-end").value      = a.session.end_utc;
+  document.getElementById("f-atr-stop").value         = a.risk.atr_multiplier_stop;
+  document.getElementById("f-atr-tp").value           = a.risk.atr_multiplier_tp;
+  document.getElementById("f-trail-pts").value        = a.risk.trail_pts;
+  document.getElementById("f-max-trades").value       = a.max_trades_per_day;
+  document.getElementById("form-card-title").textContent = "✏️ EDIT ACCOUNT";
+  document.getElementById("form-msg").innerHTML = "";
+  toggleRunnerField();
+}
+
+function deleteAccount(id) {
+  if (!confirm(`Delete account "${localAccts[id]?.label}"?`)) return;
+  delete localAccts[id];
+  saveLocalAccounts();
+  syncAccountsToEngine();
+  renderSettingsAccounts();
+}
+
+function saveAccount() {
+  const label    = document.getElementById("f-label").value.trim();
+  const tvId     = document.getElementById("f-tradovate-id").value.trim();
+  const instr    = document.getElementById("f-instrument").value;
+  const exitStr  = document.getElementById("f-exit-structure").value;
+  const tpC      = parseInt(document.getElementById("f-tp-contracts").value) || 1;
+  const runC     = parseInt(document.getElementById("f-runner-contracts").value) || 1;
+  const sessS    = parseInt(document.getElementById("f-session-start").value) || 13;
+  const sessE    = parseInt(document.getElementById("f-session-end").value) || 17;
+  const atrStop  = parseFloat(document.getElementById("f-atr-stop").value) || 1.5;
+  const atrTp    = parseFloat(document.getElementById("f-atr-tp").value) || 1.3;
+  const trail    = parseFloat(document.getElementById("f-trail-pts").value) || 5;
+  const maxTr    = parseInt(document.getElementById("f-max-trades").value) || 1;
+  const editId   = document.getElementById("f-edit-id").value;
+  const msgEl    = document.getElementById("form-msg");
+
+  if (!label || !tvId) {
+    msgEl.innerHTML = '<span class="msg-err">Label and Tradovate ID are required.</span>';
+    return;
+  }
+
+  const key = editId || tvId.replace(/[^a-zA-Z0-9_]/g,"_").toUpperCase();
+  const sizing = exitStr === "tp_runner"
+    ? { tp: tpC, runner: runC }
+    : { contracts: tpC };
+
+  localAccts[key] = {
+    id:             tvId,
+    label:          label,
+    instrument:     instr,
+    exit_structure: exitStr,
+    sizing:         sizing,
+    risk: {
+      atr_multiplier_stop: atrStop,
+      atr_multiplier_tp:   atrTp,
+      trail_pts:           trail,
+      min_stop_pts:        1.0,
+    },
+    session: { start_utc: sessS, end_utc: sessE },
+    max_trades_per_day: maxTr,
+    enabled: true,
+  };
+
+  saveLocalAccounts();
+  syncAccountsToEngine();
+  renderSettingsAccounts();
+  clearForm();
+  msgEl.innerHTML = '<span class="msg-ok">✓ Account saved.</span>';
+  setTimeout(() => msgEl.innerHTML = "", 2500);
+}
+
+async function syncAccountsToEngine() {
+  try {
+    await fetch("/api/update_accounts", {
+      method:"POST",
+      headers:{..._h(),"Content-Type":"application/json"},
+      body: JSON.stringify(localAccts),
+    });
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════════════
+const _h = () => ({"X-Bot-Token": window._BOT_TOKEN || ""});
+
+async function toggleRun() {
+  if (appState.emergency_stop)
+    await fetch("/api/clear_emergency", {method:"POST", headers:_h()});
+  await fetch("/api/toggle_run", {method:"POST", headers:_h()});
+  poll();
+}
+
+async function emergencyStop() {
+  await fetch("/api/emergency_stop", {method:"POST", headers:_h()});
+  poll();
+}
+
+async function toggleLocalTrading() {
+  // Turning ON places real-money orders on the local account. Confirm first.
+  if (!appState.local_trading &&
+      !confirm("Enable LIVE order placement on the local account?\n\nSignals keep generating and broadcasting either way — this only controls whether THIS bot trades its own account."))
+    return;
+  await fetch("/api/toggle_local_trading", {method:"POST", headers:_h()});
+  poll();
+}
+
+async function toggleStrategy(id) {
+  await fetch("/api/toggle_strategy",{
+    method:"POST",
+    headers:{..._h(),"Content-Type":"application/json"},
+    body: JSON.stringify({strategy:id}),
+  });
+  poll();
+}
+
+async function toggleAccount(id) {
+  await fetch("/api/toggle_account",{
+    method:"POST",
+    headers:{..._h(),"Content-Type":"application/json"},
+    body: JSON.stringify({account:id}),
+  });
+  poll();
+}
+
+// ── Module 1: News Blackout widget (frontend-only) ──────────────────────
+function updateNewsWidget(data) {
+  const card = document.getElementById("news-blackout-card");
+  if (!card) return;
+  const indicator = document.getElementById("news-status-indicator");
+  const eventList = document.getElementById("news-event-list");
+  data = data || {};
+  const stateColors = {
+    clear:       { color: "#22d08a", label: "CLEAR",       badge: "TRADING OK" },
+    approaching: { color: "#ff8c00", label: "APPROACHING", badge: "CAUTION" },
+    pre_buffer:  { color: "#ffb800", label: "PRE-BUFFER",  badge: "NO NEW ENTRIES" },
+    blackout:    { color: "#ff3b5c", label: "BLACKOUT",    badge: "NO TRADING" }
+  };
+  const st = stateColors[data.state] || stateColors.clear;
+  indicator.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:${st.color};box-shadow:0 0 6px ${st.color};"></div>
+      <span style="color:${st.color};font-size:10px;letter-spacing:3px;">${st.label}</span>
+      <span style="margin-left:auto;padding:2px 8px;border:1px solid ${st.color};color:${st.color};font-size:9px;letter-spacing:2px;background:${st.color}22;">${st.badge}</span>
+    </div>`;
+  const evs = data.events_today || [];
+  if (evs.length > 0) {
+    eventList.innerHTML = evs.slice(0, 3).map(ev => {
+      const ma = Number(ev.minutes_away);
+      const hrs = Math.floor(ma / 60);
+      const mins = ma % 60;
+      const timeStr = ma < 0 ? "ACTIVE" : ma < 60 ? `${mins}m` : `+${hrs}h ${mins}m`;
+      const timeColor = ma < 30 ? "#ff3b5c" : ma < 60 ? "#ffb800" : "#22d08a";
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:10px;">
+          <span style="color:var(--text);">${esc(ev.name)}</span>
+          <span style="color:${timeColor};font-weight:700;">${timeStr}</span>
+        </div>`;
+    }).join("");
+  } else {
+    eventList.innerHTML = `<div style="color:var(--muted);font-size:10px;">No events today</div>`;
+  }
+}
+
+// ── Module 2: Accounts compact tile + fullscreen modal (adapted) ────────
+let _acctModalFilter = "all";
+
+function _acctGroup(a) { return (a.connector || a.credential_set || "OTHER").toString().toUpperCase(); }
+function _acctBal(a) { const n = Number(a.balance); return isNaN(n) ? null : n; }
+
+function openAccountsModal() {
+  const m = document.getElementById("accounts-modal");
+  if (m) { m.classList.add("open"); renderModalAccounts(); }
+}
+function closeAccountsModal() {
+  const m = document.getElementById("accounts-modal");
+  if (m) m.classList.remove("open");
+}
+
+function updateAccountsTile(accounts) {
+  const tile = document.getElementById("accts-tile-body");
+  if (!tile) return;
+  const entries = Object.entries(accounts || {});
+  if (entries.length === 0) {
+    tile.innerHTML = `<div style="color:var(--muted);font-size:10px;padding:8px 0;">No accounts configured</div>`;
+    return;
+  }
+  const groups = {};
+  let total = 0, haveBal = false;
+  entries.forEach(([id, a]) => {
+    const g = _acctGroup(a);
+    if (!groups[g]) groups[g] = { count: 0, balance: 0, warn: false };
+    groups[g].count++;
+    const b = _acctBal(a);
+    if (b !== null) { groups[g].balance += b; total += b; haveBal = true; }
+    if (!a.enabled) groups[g].warn = true;
+  });
+  tile.innerHTML = Object.entries(groups).map(([g, d]) => {
+    const dot = d.warn ? "#ffb800" : "#22d08a";
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:10px;">
+        <span>
+          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dot};box-shadow:0 0 5px ${dot};margin-right:6px;"></span>
+          <span style="color:var(--text);">${esc(g)}</span>
+          <span style="color:var(--muted);font-size:9px;margin-left:6px;">${d.count} acct</span>
+        </span>
+        <span style="color:#22d08a;">$${Math.round(d.balance).toLocaleString()}</span>
+      </div>`;
+  }).join("") + `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
+      <span style="font-size:9px;color:var(--muted);letter-spacing:2px;">TOTAL</span>
+      <span style="color:var(--accent);font-size:14px;">${haveBal ? "$" + Math.round(total).toLocaleString() : "—"}</span>
+    </div>`;
+}
+
+function renderModalAccounts() {
+  const accounts = window._ffAccounts || {};
+  const entries = Object.entries(accounts);
+  let total = 0, haveBal = false;
+  entries.forEach(([, a]) => { const b = _acctBal(a); if (b !== null) { total += b; haveBal = true; } });
+  const active = entries.filter(([, a]) => a.enabled).length;
+  const groups = [...new Set(entries.map(([, a]) => _acctGroup(a)))];
+
+  const chips = document.getElementById("modal-summary-chips");
+  if (chips) chips.innerHTML = `
+    <div class="ff-chip" style="border-color:rgba(0,212,255,0.3);color:var(--accent);">${entries.length} ACCOUNTS</div>
+    <div class="ff-chip" style="border-color:rgba(34,208,138,0.3);color:#22d08a;">${haveBal ? "$" + Math.round(total).toLocaleString() : "—"} TOTAL</div>
+    <div class="ff-chip" style="border-color:rgba(34,208,138,0.3);color:#22d08a;">${active} ACTIVE</div>`;
+
+  const tabs = ["all", ...groups];
+  const tabEl = document.getElementById("modal-firm-tabs");
+  if (tabEl) tabEl.innerHTML = tabs.map(f => `
+    <div class="ff-firm-tab ${_acctModalFilter === f ? "active" : ""}" onclick="setModalFilter('${f}')">${esc(f.toUpperCase())}
+      <span style="font-size:8px;margin-left:4px;opacity:0.7;">${f === "all" ? entries.length : entries.filter(([, a]) => _acctGroup(a) === f).length}</span>
+    </div>`).join("");
+
+  const filtered = _acctModalFilter === "all" ? entries : entries.filter(([, a]) => _acctGroup(a) === _acctModalFilter);
+  let html = "";
+  if (_acctModalFilter === "all") {
+    const grouped = {};
+    filtered.forEach(([id, a]) => { const g = _acctGroup(a); (grouped[g] = grouped[g] || []).push([id, a]); });
+    Object.entries(grouped).forEach(([g, accts]) => {
+      html += `<div class="ff-acct-group-header">● ${esc(g)} — ${accts.length} account${accts.length > 1 ? "s" : ""}</div>`;
+      html += accts.map(([id, a]) => renderAcctRow(id, a)).join("");
+    });
+  } else {
+    html = filtered.map(([id, a]) => renderAcctRow(id, a)).join("");
+  }
+  const listEl = document.getElementById("modal-acct-list");
+  if (listEl) listEl.innerHTML = html || `<div style="color:var(--muted);font-size:10px;padding:20px 0;">No accounts</div>`;
+}
+
+function renderAcctRow(id, a) {
+  const pos = (window._ffPositions || {})[id];
+  const dotColor = a.enabled ? "#22d08a" : "#2a4a60";
+  const bal = _acctBal(a);
+  const balColor = (bal !== null && bal < 0) ? "var(--red)" : "#22d08a";
+  const stageTxt = (a.stage || "").toString().toUpperCase() || (a.passed ? "FUNDED" : "EVAL");
+  const stageCls = (a.passed || /FUND/.test(stageTxt)) ? "ff-stage-funded" : "ff-stage-eval";
+  const connector = a.connector === "ninjatrader"
+    ? `<span style="font-size:9px;color:var(--accent);margin-left:4px;">NT</span>` : "";
+
+  let rulesHtml = "";
+  if (a.plan && a.stage === "evaluation") {
+    const lines = [
+      `<b>${esc(a.plan)}</b>`,
+      a.target          ? `Target: <b>$${Number(a.target).toLocaleString()}</b>` : "",
+      a.trailing_dd     ? `Trail DD: <b>$${Number(a.trailing_dd).toLocaleString()}</b>` : "",
+      a.cushion         ? `Cushion: <b style="color:${Number(a.cushion) < 500 ? "var(--red)" : "var(--green)"}">$${Number(a.cushion).toLocaleString()}</b>` : "",
+      a.daily_loss_limit ? `DLL: $${Number(a.daily_loss_limit).toLocaleString()}/day` : "",
+      a.max_contracts_mini ? `Max: ${a.max_contracts_mini} mini / ${a.max_contracts_nq || 0} NQ` : "",
+      a.close_by_et     ? `Close by ${a.close_by_et} ET` : "",
+      a.time_limit      ? `${a.time_limit}-day limit` : "",
+    ].filter(Boolean);
+    rulesHtml = `<div class="acct-rules" style="margin-top:4px;">${lines.join(" &nbsp;·&nbsp; ")}</div>`;
+  } else if (a.plan) {
+    rulesHtml = `<div class="acct-rules" style="margin-top:4px;">${esc(a.plan)}</div>`;
+  }
+
+  const posHtml = pos
+    ? `<div class="position-box" style="margin-top:8px;">
+        <div class="pos-direction ${pos.direction}">${esc(pos.direction)}</div>
+        <div class="pos-row"><span>ENTRY</span><span class="pos-val">${pos.entry}</span></div>
+        <div class="pos-row"><span>STOP</span><span class="pos-val" style="color:var(--red)">${pos.stop}</span></div>
+        <div class="pos-row"><span>TP</span><span class="pos-val" style="color:var(--green)">${pos.tp}</span></div>
+        <div class="pos-row"><span>STRATEGY</span><span class="pos-val">${esc(pos.strategy)}</span></div>
+       </div>`
+    : "";
+
+  return `
+    <div class="ff-acct-row" style="display:grid;grid-template-columns:12px 1fr auto auto auto;align-items:start;gap:12px;padding:10px 4px;border-bottom:1px solid rgba(14,42,58,0.4);font-size:10px;">
+      <div style="width:7px;height:7px;border-radius:50%;background:${dotColor};${a.enabled ? "box-shadow:0 0 5px " + dotColor : ""};margin-top:4px;"></div>
+      <div>
+        <div style="color:var(--text);font-size:10px;">${esc(a.label || id)}${connector}</div>
+        <div style="color:var(--muted);font-size:8px;">${esc(id)}${a.instrument ? " · " + esc(a.instrument) : ""}</div>
+        ${a.floor != null && !isNaN(Number(a.floor)) ? `<div style="font-size:9px;color:var(--warn);margin-top:1px;">FLOOR $${Number(a.floor).toLocaleString()}</div>` : ""}
+        ${(a.daily_pnl != null && Number(a.daily_pnl) !== 0) ? `<div style="font-size:9px;color:${Number(a.daily_pnl) < 0 ? "var(--red)" : "var(--green)"};margin-top:1px;">PnL today $${Number(a.daily_pnl).toLocaleString()}</div>` : ""}
+        ${rulesHtml}
+        ${posHtml}
+      </div>
+      <span class="ff-stage-badge ${stageCls}" style="align-self:start;">${esc(stageTxt)}</span>
+      <div style="color:${balColor};text-align:right;align-self:start;">${bal !== null ? "$" + bal.toLocaleString() : "—"}</div>
+      <label class="toggle" style="align-self:start;">
+        <input type="checkbox" ${a.enabled ? "checked" : ""} onchange="toggleAccount('${id}')">
+        <span class="slider"></span>
+      </label>
+    </div>`;
+}
+
+function setModalFilter(f) { _acctModalFilter = f; renderModalAccounts(); }
+
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// Init runner field visibility
+toggleRunnerField();
+</script>
+
+<script>
+/* ===== FuturesForged CLIENT layer (additive) ===== */
+const SB_URL="https://osxwkgmjwtdyvqwlfyre.supabase.co";
+const SB_KEY="sb_publishable_6Rz0VGoqTeBzVwNMs0vcCg_ev34l8kb";
+const _sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SB_URL,SB_KEY):null;
+const TIER_RANK={starter:1,pro:2,elite:3};
+window.RANK=0; window.TIER="";
+const STRAT_LABELS={sweep_reverse:"Sweep & Reverse",box_mr_london:"Box MR London",box_mr_power:"Box MR Power Hour",momentum_nq:"Momentum Breakout NQ",momentum_es:"Momentum Breakout ES"};
+
+async function verifyLicense(k){ if(!_sb)return{valid:false}; try{const{data,error}=await _sb.rpc("verify_license",{p_key:k}); if(error)return{valid:false}; return data||{valid:false};}catch(e){return{valid:false};} }
+function applyTier(tier,name){
+  window.TIER=tier; window.RANK=TIER_RANK[tier]||1;
+  const hr=document.querySelector(".header-right"); let tb=document.getElementById("tier-badge");
+  if(!tb&&hr){ tb=document.createElement("span"); tb.id="tier-badge"; tb.style.cssText="font:700 10px 'Share Tech Mono',monospace;letter-spacing:1px;padding:3px 10px;border-radius:99px;background:rgba(0,212,255,.12);border:1px solid var(--accent);color:var(--accent)"; hr.insertBefore(tb,hr.firstChild); }
+  if(tb) tb.textContent=(tier==="elite"?"DESK":tier.toUpperCase())+(name?" · "+name:"");
+  if(typeof poll==="function") poll();
+}
+async function gateActivate(){
+  const k=(document.getElementById("lic-key").value||"").trim().toUpperCase();
+  const m=document.getElementById("lic-msg"); m.style.color="#4a7a9b"; m.textContent="Verifying…";
+  const r=await verifyLicense(k);
+  if(r&&r.valid){ localStorage.setItem("ff_license",k); applyTier(r.tier||"starter",r.full_name); document.getElementById("license-gate").style.display="none"; }
+  else { m.style.color="#ff4c6e"; m.textContent="Invalid or inactive license."; }
+}
+document.addEventListener("keydown",function(e){ const g=document.getElementById("license-gate"); if(e.key==="Enter"&&g&&g.style.display!=="none") gateActivate(); });
+(async function(){ const s=localStorage.getItem("ff_license"); if(s){ const r=await verifyLicense(s); if(r&&r.valid){ applyTier(r.tier||"starter",r.full_name); const g=document.getElementById("license-gate"); if(g)g.style.display="none"; } } })();
+
+/* cloud data mapped to the bot's /api/state shape (original render reused verbatim) */
+window.cloudState=async function(){
+  const base={time_utc:new Date().toISOString().slice(11,19),feed_ok:true,running:true,emergency_stop:false,local_trading:false,
+              strategies:{},accounts:{},positions:{},signals:[],log:[]};
+  /* always show the engine's 5 strategies (mirror the bot) */
+  Object.keys(STRAT_LABELS).forEach(function(id){ base.strategies[id]={label:STRAT_LABELS[id],enabled:true}; });
+  if(!_sb) return base;
+  let rows=[];
+  try{ const q=await _sb.from("signals").select("id,ts,symbol,side,strategy,status,entry,t1,t2,stop,pnl").eq("published",true).order("ts",{ascending:false}).limit(30); if(!q.error&&q.data) rows=q.data; }catch(e){}
+  const pro=window.RANK>=2;
+  const L='<span class="locktag" title="Upgrade to Pro to reveal pricing">\u{1F512} PRO</span>';
+  base.signals=rows.map(function(r){
+    const e=parseFloat(r.entry),sp=parseFloat(r.stop),tp=parseFloat(r.t1);
+    let rr=(!isNaN(e)&&!isNaN(sp)&&!isNaN(tp)&&Math.abs(e-sp)>0)?(Math.abs(tp-e)/Math.abs(e-sp)).toFixed(2):"--";
+    return { dt:(r.ts||"").replace("T"," "), direction:(r.side||"").toUpperCase(), status:(r.status||"").toUpperCase()||"LIVE", strategy:r.strategy,
+      entry: pro?(r.entry==null?"--":r.entry):L, stop_price: pro?(r.stop==null?"--":r.stop):L,
+      tp_price: pro?(r.t1==null?"--":r.t1):L, rr: pro?rr:L, sim_pnl: r.pnl };
+  });
+  /* clean event log built from signals (NO L2 / order-flow sensory data) */
+  base.log=rows.slice(0,16).map(function(r){ return {ts:(r.ts||"").slice(11,19),level:String(r.status).toLowerCase()==="executed"?"INFO":"WARN",msg:"["+(r.strategy||"?")+"] "+((r.side||"").toUpperCase())+" "+(r.symbol||"")+(r.entry!=null&&pro?" @ "+r.entry:"")}; });
+  return base;
+};
+
+/* appearance (kept in the existing Settings tab footer) */
+function ffTheme(t){ document.body.setAttribute("data-theme",t); localStorage.setItem("ff_theme",t); }
+ffTheme(localStorage.getItem("ff_theme")||"dark");
+
+/* prop firms rendered from the editable Supabase table (update links anytime, no rebuild) */
+async function ffRenderPropFirms(){
+  if(!_sb) return;
+  try{
+    const q=await _sb.from("prop_firms").select("name,type_label,sizes,url,note,sort").eq("active",true).order("sort");
+    if(q.error||!q.data) return;
+    const grid=document.getElementById("propfirm-grid"); if(!grid) return;
+    const E=function(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");};
+    grid.innerHTML=q.data.map(function(f){
+      const chips=String(f.sizes||"").split(",").map(function(s){ s=s.trim(); if(!s) return ""; const star=s.endsWith("*"); const v=star?s.slice(0,-1):s;
+        return `<span style="font-size:10px;background:${star?'rgba(0,255,136,0.15)':'rgba(0,212,255,0.1)'};border:1px solid ${star?'var(--accent2)':'var(--border)'};color:${star?'var(--accent2)':'var(--muted)'};padding:3px 8px;border-radius:3px;">${E(v)}${star?' ★':''}</span>`; }).join("");
+      const note=f.note?`<div style="font-size:9px;color:var(--warn);letter-spacing:1px;margin-bottom:8px;">${E(f.note)}</div>`:"";
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;"><div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:2px;margin-bottom:4px;">${E(f.name)}</div><div style="font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:12px;">${E(f.type_label)}</div>${note}<div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Account Sizes</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">${chips}</div><a href="${E(f.url)}" target="_blank" rel="noopener" style="display:block;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px;border-radius:4px;text-decoration:none;">PURCHASE EVAL →</a></div>`;
+    }).join("");
+  }catch(e){}
+}
+ffRenderPropFirms();
+
+/* dashboard mini live-chart (mirror of Chart Studio), reads bars from Supabase */
+function ffMiniChart(){
+  const el=document.getElementById("mini-chart");
+  if(!el || el._ffDone || !window.LightweightCharts || !_sb) return;
+  if(el.clientWidth===0) return;           /* app still hidden during launch */
+  el._ffDone=true;
+  _sb.from("bars").select("ts,o,h,l,c").eq("symbol","NQ").eq("tf","1m").order("ts",{ascending:false}).limit(180).then(function(q){
+    if(q&&q.data) q.data.reverse();
+    if(q.error||!q.data||!q.data.length){ el._ffDone=false; return; }
+    try{
+      const chart=LightweightCharts.createChart(el,{ width:el.clientWidth, height:190,
+        layout:{background:{color:"transparent"},textColor:"#4a7a9b",fontFamily:"Share Tech Mono, monospace"},
+        grid:{vertLines:{color:"rgba(14,42,58,0.45)"},horzLines:{color:"rgba(14,42,58,0.45)"}},
+        timeScale:{borderColor:"#0e2a3a",timeVisible:true,secondsVisible:false},
+        rightPriceScale:{borderColor:"#0e2a3a"}, crosshair:{mode:0} });
+      const s=chart.addCandlestickSeries({upColor:"#22d08a",downColor:"#ff4c6e",wickUpColor:"#22d08a",wickDownColor:"#ff4c6e",borderVisible:false});
+      s.setData(q.data.map(function(b){return {time:Math.floor(new Date(b.ts).getTime()/1000),open:+b.o,high:+b.h,low:+b.l,close:+b.c};}));
+      chart.timeScale().fitContent();
+      new ResizeObserver(function(){ chart.applyOptions({width:el.clientWidth}); }).observe(el);
+    }catch(e){ el._ffDone=false; }
+  });
+}
+setInterval(ffMiniChart, 1500);
+</script>
+<!-- ── COPIER TAB ENGINE (namespaced, talks to local copier on :7332) ── -->
+<script>
+(function(){
+  const API = "http://localhost:7332";
+  let S = {};
+  const $ = id => document.getElementById(id);
+  const ce = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+  async function poll(){
+    try{
+      const r = await fetch(`${API}/api/state`);
+      if(!r.ok) return offline(true);
+      S = await r.json(); offline(false); render();
+    }catch(e){ offline(true); }
+  }
+  function offline(b){ const o=$("cp-offline"); if(o) o.style.display=b?"block":"none"; }
+  async function post(path, body){
+    const r = await fetch(`${API}${path}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});
+    const d = await r.json().catch(()=>({}));
+    if(d && d.ok===false && d.msg) alert(d.msg);
+    await poll(); return d;
+  }
+  function assigned(){ const s=new Set(); (S.groups||[]).forEach(g=>{if(g.master)s.add(g.master);Object.keys(g.subs||{}).forEach(k=>s.add(k));}); return s; }
+  function acctOpts(sel,blank){ const used=assigned(); let h=blank?`<option value="">- none -</option>`:""; for(const[k,a]of Object.entries(S.accounts||{})){const d=used.has(k)&&k!==sel?"disabled":""; h+=`<option value="${k}" ${k===sel?"selected":""} ${d}>${a.label}</option>`;} return h; }
+  function subsFor(strat){ return (S.groups||[]).filter(g=>g.enabled&&(g.strategies||[]).includes(strat)); }
+
+  function render(){ if(!$("cp-groups")) return; inbox(); groups(); unassigned(); selectors(); orders(); logbox();
+    const e=$("cp-estop"); if(e) e.className = S.emergency?"cp-estop on":"cp-estop"; preview(); }
+
+  function inbox(){
+    const el=$("cp-inbox"); const ib=S.inbox||[];
+    const pend=ib.filter(s=>s.status==="pending").length;
+    $("cp-inbox-count").textContent = pend?pend+" pending":"";
+    if(!ib.length){ el.innerHTML='<div class="cp-mc">Waiting for signals...</div>'; return; }
+    const f=n=>n==null?"-":Number(n).toLocaleString(undefined,{maximumFractionDigits:2});
+    el.innerHTML = ib.slice(0,12).map(s=>{
+      const sub=subsFor(s.strategy);
+      const tm=s.ts?new Date(s.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):"";
+      let act;
+      if(s.status==="executed") act=`<span class="cp-stat executed">EXECUTED - ${s.results.length} fill(s)</span>`;
+      else if(s.status==="denied") act=`<span class="cp-stat denied">DENIED</span>`;
+      else if(sub.length) act=`<input class="cp-num" type="number" id="cp-q-${s.id}" value="1" min="1" max="50"> <button class="cp-acc2" onclick="cp.decide(${s.id},'accept')">ACCEPT &rarr; ${sub.length} grp</button> <button class="cp-deny" onclick="cp.decide(${s.id},'deny')">DENY</button>`;
+      else act=`<span class="cp-lock">No group subscribed to ${ce(s.strategy)} - subscribe to enable</span> <button class="cp-deny" onclick="cp.decide(${s.id},'deny')">DISMISS</button>`;
+      return `<div class="cp-sig ${s.status}"><div class="cp-stop"><span class="cp-ssym">${ce(s.symbol||'?')}</span><span class="cp-sside ${s.side}">${ce(s.side)}</span><span class="cp-sstrat">${ce(s.strategy)}</span><span class="cp-grow"></span><span class="cp-lbl">${tm}</span></div><div class="cp-spx"><span><b>entry</b> ${f(s.entry)}</span><span><b>t1</b> ${f(s.t1)}</span><span><b>t2</b> ${f(s.t2)}</span><span><b>stop</b> ${f(s.stop)}</span></div><div class="cp-sact">${act}</div></div>`;
+    }).join("");
+  }
+
+  function groups(){
+    const el=$("cp-groups"); if(!S.groups) return;
+    el.innerHTML=S.groups.map(g=>{
+      const subs=Object.entries(g.subs||{}).map(([k,sc])=>`<div class="cp-row"><span class="cp-tag s">SUB</span><span style="font-size:11px">${S.accounts[k]?.label||k}</span><span class="cp-lbl">x</span><input class="cp-num" type="number" min="0.1" max="10" step="0.1" value="${sc.ratio}" onchange="cp.sub('${g.id}','${k}',{ratio:this.value})"><select class="cp-sel" onchange="cp.sub('${g.id}','${k}',{instrument_override:this.value})"><option value="">same</option>${Object.keys(S.instruments||{}).map(i=>`<option value="${i}" ${sc.instrument_override===i?'selected':''}>${i}</option>`).join("")}</select><button class="cp-btn" onclick="cp.sub('${g.id}','${k}',{remove:true})">x</button></div>`).join("");
+      const chips=(S.strategies||[]).map(st=>`<span class="cp-chip ${(g.strategies||[]).includes(st)?'on':''}" onclick="cp.toggleStrat('${g.id}','${ce(st)}')">${ce(st)}</span>`).join("");
+      return `<div class="cp-group ${g.enabled?'':'off'}"><div class="cp-ghead"><input class="cp-gname" value="${ce(g.name)}" onchange="cp.gmeta('${g.id}',{name:this.value})"><span class="cp-grow"></span><button class="cp-btn" onclick="cp.gmeta('${g.id}',{enabled:${!g.enabled}})">${g.enabled?'ON':'OFF'}</button><button class="cp-btn" onclick="if(confirm('Remove ${ce(g.name)}?'))cp.rmGroup('${g.id}')">x</button></div><div class="cp-row"><span class="cp-tag m">MASTER</span><select class="cp-sel" style="min-width:140px" onchange="cp.master('${g.id}',this.value)">${acctOpts(g.master,true)}</select></div><div class="cp-subhdr">SUB-ACCOUNTS</div>${subs||'<div class="cp-mc" style="padding:5px">no subs</div>'}<div style="display:flex;gap:6px;margin-top:6px"><select class="cp-sel" id="cp-addsub-${g.id}"><option value="">+ add sub...</option>${acctOpts(null,false)}</select><button class="cp-btn" onclick="cp.addSub('${g.id}')">ADD</button></div><div class="cp-subhdr">SUBSCRIBED STRATEGIES</div><div class="cp-chips">${chips}</div></div>`;
+    }).join("");
+  }
+
+  function unassigned(){ const used=assigned(); const free=Object.entries(S.accounts||{}).filter(([k])=>!used.has(k)); $("cp-unassigned").innerHTML=free.length?free.map(([k,a])=>`<span class="cp-pill">${a.label}</span>`).join(""):'<div class="cp-mc">all accounts assigned</div>'; }
+
+  function selectors(){
+    const g=$("cp-o-group"); const prev=g.value;
+    g.innerHTML=(S.groups||[]).filter(x=>x.enabled&&x.master).map(x=>`<option value="${x.id}">${ce(x.name)} - ${S.accounts[x.master]?.label}</option>`).join("");
+    if(prev) g.value=prev;
+    const i=$("cp-o-instr"); if(i.options.length===0&&S.instruments) i.innerHTML=Object.entries(S.instruments).map(([k,v])=>`<option value="${k}">${k} - ${v.name}</option>`).join("");
+  }
+
+  function orders(){ const el=$("cp-orders"); const o=S.orders||[]; if(!o.length) return;
+    el.innerHTML=o.map(x=>{const dt=x.dt?x.dt.slice(11,19):"--";const rows=(x.results||[]).map(r=>`<div style="color:${r.ok?'var(--green)':'var(--red)'}">${r.group} / ${r.role==='master'?'M':'S'} ${r.account}: ${r.contracts}x ${r.ok?'OK':'X'}</div>`).join("");
+    return `<div class="cp-oitem"><span class="cp-ts">${dt}</span><span style="color:${x.direction==='LONG'?'var(--green)':'var(--red)'}">${x.direction}</span> ${x.contracts}x ${ce(x.instrument)} <span class="cp-sstrat">${ce(x.strategy)}</span><div style="margin-top:3px;padding-left:8px">${rows}</div></div>`;}).join("");
+  }
+
+  function logbox(){ $("cp-logbox").innerHTML=(S.log||[]).map(l=>`<div class="cp-ll ${l.level}"><span class="cp-ts">${l.ts}</span>${ce(l.msg)}</div>`).join(""); }
+
+  function preview(){ const gid=$("cp-o-group")?.value; const base=parseInt($("cp-o-qty")?.value)||1; const g=(S.groups||[]).find(x=>x.id===gid); const b=$("cp-preview"); if(!b) return;
+    if(!g){ b.innerHTML='<div class="cp-mc">no group selected</div>'; return; }
+    let h=`<div class="cp-prow"><span class="cp-lbl">MASTER</span><span>${S.accounts[g.master]?.label||'-'} - ${base}x</span></div>`;
+    for(const[k,sc]of Object.entries(g.subs||{})){const c=Math.max(1,Math.round(base*(sc.ratio||1)));h+=`<div class="cp-prow"><span class="cp-lbl">SUB ${S.accounts[k]?.label}</span><span>${c}x ${sc.instrument_override?'('+sc.instrument_override+')':''}</span></div>`;}
+    b.innerHTML=h;
+  }
+
+  window.cp = {
+    addGroup: async ()=>{ const n=prompt("Group name:","Group "+((S.groups||[]).length+1)); if(n!==null) await post('/api/add_group',{name:n}); },
+    rmGroup: id=>post('/api/remove_group',{id}),
+    gmeta: (id,o)=>post('/api/set_group',Object.assign({id},o)),
+    master: (gid,k)=>post('/api/set_master',{group_id:gid,account_key:k}),
+    sub: (gid,k,o)=>post('/api/set_sub',Object.assign({group_id:gid,account_key:k},o)),
+    addSub: gid=>{ const k=$('cp-addsub-'+gid).value; if(k) post('/api/set_sub',{group_id:gid,account_key:k}); },
+    addStrat: async ()=>{ const n=prompt("New strategy tag:"); if(n) await post('/api/add_strategy',{name:n}); },
+    toggleStrat: (gid,st)=>{ const g=(S.groups||[]).find(x=>x.id===gid); if(!g) return; const c=new Set(g.strategies||[]); c.has(st)?c.delete(st):c.add(st); post('/api/set_group',{id:gid,strategies:[...c]}); },
+    decide: (id,d)=>{ let q=1; if(d==='accept'){const e=$('cp-q-'+id); q=parseInt(e?.value)||1;} post('/api/signal_decision',{id,decision:d,contracts:q}); },
+    order: dir=>{ const gid=$("cp-o-group").value; if(!gid){alert("Create a group with a master first.");return;} const g=(S.groups||[]).find(x=>x.id===gid); const instrument=$("cp-o-instr").value; const order_type=$("cp-o-type").value; const contracts=parseInt($("cp-o-qty").value)||1; if(!confirm(`${dir} ${contracts}x ${instrument} on ${g.name} (master + ${Object.keys(g.subs||{}).length} subs)?`)) return; post('/api/place_order',{group_id:gid,strategy:"MANUAL",instrument,direction:dir,order_type,contracts}); },
+    estop: ()=>{ if(confirm("EMERGENCY FLATTEN ALL POSITIONS on ALL accounts?")) post('/api/emergency',{}); },
+    preview
+  };
+
+  poll(); setInterval(poll, 2000);
+})();
+</script>
+
+<script>window.addEventListener("load",function(){try{localStorage.setItem("ff_license","FF-78B6F114-BE908C6A");}catch(e){}setTimeout(function(){try{var g=document.getElementById("license-gate");if(g)g.style.display="none";applyTier("elite","Preview");}catch(e){}},300);});</script>
+</body>
+</html>
