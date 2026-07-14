@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FuturesForged — Chart Studio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#060d14; --bg2:#0a1a26; --bg3:#0e2338;
+  --accent:#00d4ff; --accent2:#00ff88;
+  --danger:#ff3b5c; --warn:#ffb800;
+  --text:#c8dae8; --muted:#4a7a9b;
+  --border:#0e2a3a; --card:rgba(10,26,38,0.9);
+  --green:#22d08a; --red:#ff4c6e;
+}
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@600;700&display=swap');
+body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden;}
+body[data-theme="light"]{ --bg:#eef3f7; --bg2:#ffffff; --bg3:#eef5fa; --text:#13212b; --muted:#5b7387; --border:#d3e0ea; --card:rgba(255,255,255,0.96); }
+
+.wrap{max-width:1500px;margin:0 auto;padding:16px 20px 40px;}
+
+/* ── header ── */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;padding:8px 0 16px;border-bottom:1px solid var(--border);margin-bottom:18px;}
+.brand{display:flex;align-items:baseline;gap:12px;}
+.brand .logo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:22px;letter-spacing:1px;}
+.brand .logo .a{color:var(--accent);}
+.brand .tag{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+select.pick{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--accent);background:var(--bg2);
+  border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer;}
+select.pick:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.tbtn{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg2);
+  border:1px solid var(--border);border-radius:6px;padding:6px 11px;cursor:pointer;text-decoration:none;transition:.15s;}
+.tbtn:hover{border-color:var(--accent);color:var(--text);}
+
+/* ── layout ── */
+.grid{display:grid;grid-template-columns:1fr;gap:16px;}
+@media(min-width:1000px){ .grid{grid-template-columns:1fr 320px;} }
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;position:relative;overflow:hidden;}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.45;}
+.card-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.card-title .now{color:var(--text);}
+
+#chart{width:100%;height:520px;}
+@media(max-width:640px){ #chart{height:360px;} }
+#chart-msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--muted);font-size:12px;letter-spacing:2px;}
+#chart-msg.show{display:flex;}
+
+/* ── signal rail ── */
+.sig-latest{border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--bg2);margin-bottom:14px;}
+.sig-latest .none{color:var(--muted);font-size:12px;}
+.kv{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.kv:last-child{border-bottom:none;}
+.kv .k{font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.kv .v{font-variant-numeric:tabular-nums;}
+.v.long{color:var(--green);} .v.short{color:var(--red);}
+.badge{display:inline-block;font-size:9px;letter-spacing:1px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);text-transform:uppercase;}
+.badge.win{color:var(--green);border-color:rgba(34,208,138,.4);}
+.badge.loss{color:var(--red);border-color:rgba(255,76,110,.4);}
+.badge.open{color:var(--accent);border-color:rgba(0,212,255,.4);}
+
+.sig-list{max-height:340px;overflow-y:auto;}
+.sig-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;gap:8px;}
+.sig-row:last-child{border-bottom:none;}
+.sig-row .meta{color:var(--muted);}
+.dir-l{color:var(--green);} .dir-s{color:var(--red);}
+
+footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:1px;color:var(--muted);}
+
+/* ── license gate (mirrors index.html) ── */
+#license-gate{position:fixed;inset:0;z-index:99999;background:#060d14;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;}
+#license-gate .box{width:min(380px,90vw);text-align:center;padding:30px;border:1px solid #0e2a3a;border-radius:14px;background:#0a1a26;}
+#license-gate input{width:100%;padding:11px;border-radius:8px;border:1px solid #0e2a3a;background:#060d14;color:#c8dae8;font-family:'Share Tech Mono',monospace;letter-spacing:1px;text-align:center;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+
+<div id="license-gate">
+  <div class="box">
+    <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:26px;letter-spacing:1px;color:#00d4ff;">FUTURESFORGED</div>
+    <div style="font-size:11px;color:#4a7a9b;margin:6px 0 18px">Enter your license key to activate</div>
+    <input id="gate-key" placeholder="FF-XXXXXXXX-XXXXXXXX" autocomplete="off">
+    <div id="gate-msg" style="font-size:11px;color:#4a7a9b;min-height:16px;margin-top:8px;"></div>
+    <button onclick="gateActivate()" style="width:100%;margin-top:6px;padding:11px;border:0;border-radius:8px;background:#00d4ff;color:#04141c;font-weight:700;letter-spacing:1px;cursor:pointer">ACTIVATE</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <span class="logo">FUTURES<span class="a">FORGED</span></span>
+      <span class="tag">Chart Studio · Read-only</span>
+    </div>
+    <div class="controls">
+      <select class="pick" id="instr"><option value="NQ" selected>NQ</option><option value="ES">ES</option></select>
+      <select class="pick" id="tf"><option value="1">1m</option><option value="5" selected>5m</option><option value="15">15m</option><option value="30">30m</option><option value="60">1h</option></select>
+      <a class="tbtn" href="index.html">← Dashboard</a>
+      <button class="tbtn" id="themeBtn" title="Toggle theme">◐ Theme</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-title"><span>📈 Live Chart · Rithmic feed</span><span class="now" id="nowLbl">NQ · 5m</span></div>
+      <div style="position:relative;">
+        <div id="chart"></div>
+        <div id="chart-msg">WAITING FOR DATA…</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">🎯 Latest Signal</div>
+        <div class="sig-latest" id="latest"><div class="none">No signal on this instrument yet.</div></div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.5;">Entry, stop and targets for the most recent signal are drawn on the chart as price lines.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 Recent Signals</div>
+        <div class="sig-list" id="sigList"><div class="none" style="color:var(--muted);font-size:12px;">Loading…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>FUTURESFORGED — LICENSED SOFTWARE — NOT FOR REDISTRIBUTION</footer>
+</div>
+
+<script>
+// ── Supabase + license (same project/keys as the dashboard) ──
+const SB_URL="https://osxwkgmjwtdyvqwlfyre.supabase.co";
+const SB_KEY="sb_publishable_6Rz0VGoqTeBzVwNMs0vcCg_ev34l8kb";
+const _sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SB_URL,SB_KEY):null;
+
+async function verifyLicense(k){ if(!_sb)return{valid:false}; try{const{data,error}=await _sb.rpc("verify_license",{p_key:k}); if(error)return{valid:false}; return data||{valid:false};}catch(e){return{valid:false};} }
+async function gateActivate(){
+  const k=(document.getElementById("gate-key").value||"").trim(); const m=document.getElementById("gate-msg");
+  if(!k){ m.textContent="Enter a key."; return; } m.style.color="#4a7a9b"; m.textContent="Verifying…";
+  const r=await verifyLicense(k);
+  if(r&&r.valid){ localStorage.setItem("ff_license",k); document.getElementById("license-gate").style.display="none"; boot(); }
+  else { m.style.color="#ff4c6e"; m.textContent="Invalid or inactive license."; }
+}
+document.addEventListener("keydown",e=>{ const g=document.getElementById("license-gate"); if(e.key==="Enter"&&g&&g.style.display!=="none") gateActivate(); });
+
+// ── theme ──
+function ffTheme(t){ document.body.setAttribute("data-theme",t); localStorage.setItem("ff_theme",t); if(window._applyChartTheme) window._applyChartTheme(); }
+ffTheme(localStorage.getItem("ff_theme")||"dark");
+document.getElementById("themeBtn").addEventListener("click",()=>ffTheme(document.body.getAttribute("data-theme")==="light"?"dark":"light"));
+
+// ── chart state ──
+let INSTR="NQ", TF=5, chart=null, series=null, lines=[], _booted=false;
+const chartEl=document.getElementById("chart"), msgEl=document.getElementById("chart-msg");
+
+function themeColors(){
+  const light=document.body.getAttribute("data-theme")==="light";
+  return light
+    ? {txt:"#5b7387", grid:"rgba(150,180,200,.25)", border:"#d3e0ea"}
+    : {txt:"#4a7a9b", grid:"rgba(14,42,58,.6)",   border:"#0e2a3a"};
+}
+function buildChart(){
+  const c=themeColors();
+  chart=LightweightCharts.createChart(chartEl,{
+    width:chartEl.clientWidth, height:chartEl.clientHeight||520,
+    layout:{background:{color:"transparent"},textColor:c.txt,fontFamily:"Share Tech Mono, monospace"},
+    grid:{vertLines:{color:c.grid},horzLines:{color:c.grid}},
+    timeScale:{borderColor:c.border,timeVisible:true,secondsVisible:false},
+    rightPriceScale:{borderColor:c.border}, crosshair:{mode:0}
+  });
+  series=chart.addCandlestickSeries({upColor:"#22d08a",downColor:"#ff4c6e",wickUpColor:"#22d08a",wickDownColor:"#ff4c6e",borderVisible:false});
+  new ResizeObserver(()=>{ if(chartEl.clientWidth) chart.applyOptions({width:chartEl.clientWidth}); }).observe(chartEl);
+}
+window._applyChartTheme=function(){ if(!chart)return; const c=themeColors();
+  chart.applyOptions({layout:{textColor:c.txt},grid:{vertLines:{color:c.grid},horzLines:{color:c.grid}},timeScale:{borderColor:c.border},rightPriceScale:{borderColor:c.border}}); };
+
+// Aggregate 1m → TF minutes (oldest→newest).
+function agg(bars, mins){
+  if(mins<=1) return bars;
+  const span=mins*60, map={}, out=[];
+  for(const b of bars){ const k=Math.floor(b.time/span)*span; let a=map[k];
+    if(!a){ a={time:k,open:b.open,high:b.high,low:b.low,close:b.close}; map[k]=a; out.push(a); }
+    else { a.high=Math.max(a.high,b.high); a.low=Math.min(a.low,b.low); a.close=b.close; } }
+  return out;
+}
+async function loadBars(){
+  if(!_sb||!series) return;
+  const need=Math.min(1500, 220*Math.max(1,TF));
+  try{
+    const q=await _sb.from("bars").select("ts,o,h,l,c").eq("symbol",INSTR).eq("tf","1m").order("ts",{ascending:false}).limit(need);
+    if(q.error||!q.data||!q.data.length){ msgEl.classList.add("show"); return; }
+    q.data.reverse();
+    const bars1m=q.data.map(b=>({time:Math.floor(new Date(b.ts).getTime()/1000),open:+b.o,high:+b.h,low:+b.l,close:+b.c}));
+    series.setData(agg(bars1m,TF));
+    msgEl.classList.remove("show");
+  }catch(e){ msgEl.classList.add("show"); }
+}
+
+function clearLines(){ lines.forEach(h=>{try{series.removePriceLine(h)}catch(e){}}); lines=[]; }
+function line(price,color,title,dashed){
+  if(price==null||!isFinite(+price)||!series) return;
+  try{ lines.push(series.createPriceLine({price:+price,color,lineWidth:1,lineStyle:dashed?2:0,axisLabelVisible:true,title})); }catch(e){}
+}
+function rootOf(sym){ sym=(sym||"").toUpperCase(); return sym.indexOf("ES")>=0&&sym.indexOf("MES")<0?"ES":(sym.indexOf("NQ")>=0?"NQ":sym); }
+
+async function loadSignals(){
+  if(!_sb) return;
+  let rows=[];
+  try{ const q=await _sb.from("signals").select("id,ts,symbol,side,strategy,status,entry,t1,t2,stop,pnl").eq("published",true).order("ts",{ascending:false}).limit(40);
+       if(!q.error&&q.data) rows=q.data; }catch(e){}
+  const mine=rows.filter(r=>rootOf(r.symbol)===INSTR);
+
+  // recent list
+  const list=document.getElementById("sigList");
+  if(!mine.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px;">No signals for '+INSTR+' yet.</div>'; }
+  else {
+    list.innerHTML=mine.slice(0,20).map(r=>{
+      const long=(r.side||"").toUpperCase().indexOf("L")===0||(r.side||"").toUpperCase()==="BUY"||(r.side||"").toUpperCase()==="LONG";
+      const st=(r.status||"").toLowerCase();
+      const bcls=st.indexOf("win")>=0||(+r.pnl>0)?"win":(st.indexOf("loss")>=0||(+r.pnl<0)?"loss":"open");
+      const t=new Date(r.ts); const hh=isNaN(t)?"":t.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+      return '<div class="sig-row"><span><span class="'+(long?"dir-l":"dir-s")+'">'+(long?"LONG":"SHORT")+'</span> '+
+        '<span class="meta">'+esc(r.strategy||"")+'</span></span>'+
+        '<span><span class="meta">'+hh+'</span> <span class="badge '+bcls+'">'+esc(r.status||(bcls==="open"?"open":""))+'</span></span></div>';
+    }).join("");
+  }
+
+  // latest signal overlay + card
+  clearLines();
+  const latest=mine.find(r=>{ const st=(r.status||"").toLowerCase(); return st.indexOf("open")>=0||st.indexOf("active")>=0||st===""; }) || mine[0];
+  const card=document.getElementById("latest");
+  if(!latest){ card.innerHTML='<div class="none">No signal on this instrument yet.</div>'; return; }
+  const long=(latest.side||"").toUpperCase().indexOf("L")===0||(latest.side||"").toUpperCase()==="BUY"||(latest.side||"").toUpperCase()==="LONG";
+  line(latest.entry,"#e8c54a","ENTRY "+(long?"LONG":"SHORT"),false);
+  line(latest.stop,"#ff4c6e","STOP",true);
+  line(latest.t1,"#22d08a","TP1",true);
+  line(latest.t2,"#22d08a","TP2",true);
+  card.innerHTML=
+    '<div class="kv"><span class="k">Dir</span><span class="v '+(long?"long":"short")+'">'+(long?"LONG":"SHORT")+'</span></div>'+
+    '<div class="kv"><span class="k">Strategy</span><span class="v">'+esc(latest.strategy||"—")+'</span></div>'+
+    '<div class="kv"><span class="k">Entry</span><span class="v">'+fmt(latest.entry)+'</span></div>'+
+    '<div class="kv"><span class="k">Stop</span><span class="v short">'+fmt(latest.stop)+'</span></div>'+
+    '<div class="kv"><span class="k">TP1</span><span class="v long">'+fmt(latest.t1)+'</span></div>'+
+    '<div class="kv"><span class="k">TP2</span><span class="v long">'+fmt(latest.t2)+'</span></div>';
+}
+
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fmt(v){ return (v==null||v==="")?"—":(+v).toLocaleString(undefined,{maximumFractionDigits:2}); }
+function tfLabel(m){ return m>=60?(m/60)+"h":m+"m"; }
+function syncLabels(){ document.getElementById("nowLbl").textContent=INSTR+" · "+tfLabel(TF); }
+
+document.getElementById("instr").addEventListener("change",e=>{ INSTR=e.target.value; syncLabels(); loadBars(); loadSignals(); });
+document.getElementById("tf").addEventListener("change",e=>{ TF=parseInt(e.target.value)||1; syncLabels(); loadBars(); });
+
+// ── boot ──
+function boot(){
+  if(_booted) return; _booted=true;
+  buildChart(); syncLabels(); loadBars(); loadSignals();
+  setInterval(loadBars, 3000);
+  setInterval(loadSignals, 8000);
+}
+// Auto-unlock if a valid license is stored; otherwise show the gate.
+(async function(){
+  const s=localStorage.getItem("ff_license");
+  if(s){ const r=await verifyLicense(s); if(r&&r.valid){ document.getElementById("license-gate").style.display="none"; boot(); return; } }
+})();
+</script>
+<!-- Preview auto-unlock (matches index.html so ffpreview.vercel.app is viewable) -->
+<script>window.addEventListener("load",function(){try{localStorage.setItem("ff_license","FF-78B6F114-BE908C6A");}catch(e){}setTimeout(function(){try{var g=document.getElementById("license-gate");if(g)g.style.display="none";if(typeof boot==="function")boot();}catch(e){}},300);});</script>
+</body>
+</html>
