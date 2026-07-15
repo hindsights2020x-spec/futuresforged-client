@@ -505,7 +505,18 @@ footer{text-align:center;font-size:10px;color:var(--muted);padding:20px 0 10px;l
       </div>
       <div class="card" id="mini-chart-card" style="grid-column:span 2;">
         <div class="scan-line"></div>
-        <div class="card-title">📈 LIVE CHART <span id="mini-chart-sym" style="font-size:9px;color:var(--muted);margin-left:8px;">NQ · 1m</span></div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>📈 LIVE CHART <span id="mini-chart-sym" style="font-size:9px;color:var(--muted);margin-left:8px;">NQ · 1m</span></span>
+          <span style="display:flex;gap:6px;align-items:center;">
+            <select id="mini-chart-instr" style="background:var(--bg,#0a1622);color:var(--accent,#00d4ff);border:1px solid var(--border,#0e2a3a);border-radius:3px;padding:2px 6px;font-size:10px;">
+              <option value="NQ" selected>NQ</option><option value="ES">ES</option>
+            </select>
+            <select id="mini-chart-tf" style="background:var(--bg,#0a1622);color:var(--accent,#00d4ff);border:1px solid var(--border,#0e2a3a);border-radius:3px;padding:2px 6px;font-size:10px;">
+              <option value="1" selected>1m</option><option value="5">5m</option>
+              <option value="15">15m</option><option value="30">30m</option><option value="60">1h</option>
+            </select>
+          </span>
+        </div>
         <div id="mini-chart" style="width:100%;height:190px;"></div>
       </div>
     </div>
@@ -1684,27 +1695,54 @@ async function ffRenderPropFirms(){
 ffRenderPropFirms();
 
 /* dashboard mini live-chart (mirror of Chart Studio), reads bars from Supabase */
+// Mini live chart — Supabase-fed 1m NQ/ES bars, aggregated client-side into the
+// selected timeframe. Instrument + timeframe pickers mirror the bot Chart Studio.
+let _miniInstr="NQ", _miniTf=1, _miniChart=null, _miniSeries=null;
+// Aggregate 1-minute bars into `mins`-minute candles (oldest→newest in/out).
+function _miniAgg(bars, mins){
+  if(!mins || mins<=1) return bars;
+  const span=mins*60, byKey={}, out=[];
+  for(const b of bars){
+    const key=Math.floor(b.time/span)*span;
+    let a=byKey[key];
+    if(!a){ a={time:key,open:b.open,high:b.high,low:b.low,close:b.close}; byKey[key]=a; out.push(a); }
+    else { a.high=Math.max(a.high,b.high); a.low=Math.min(a.low,b.low); a.close=b.close; }
+  }
+  return out;
+}
 function ffMiniChart(){
   const el=document.getElementById("mini-chart");
-  if(!el || el._ffDone || !window.LightweightCharts || !_sb) return;
+  if(!el || !window.LightweightCharts || !_sb) return;
   if(el.clientWidth===0) return;           /* app still hidden during launch */
-  el._ffDone=true;
-  _sb.from("bars").select("ts,o,h,l,c").eq("symbol","NQ").eq("tf","1m").order("ts",{ascending:false}).limit(180).then(function(q){
+  // Pull enough 1m history to fill the highest timeframe with real candles.
+  const need = Math.min(1500, 180 * Math.max(1,_miniTf));
+  _sb.from("bars").select("ts,o,h,l,c").eq("symbol",_miniInstr).eq("tf","1m").order("ts",{ascending:false}).limit(need).then(function(q){
     if(q&&q.data) q.data.reverse();
-    if(q.error||!q.data||!q.data.length){ el._ffDone=false; return; }
+    if(q.error||!q.data||!q.data.length) return;
     try{
-      const chart=LightweightCharts.createChart(el,{ width:el.clientWidth, height:190,
-        layout:{background:{color:"transparent"},textColor:"#4a7a9b",fontFamily:"Share Tech Mono, monospace"},
-        grid:{vertLines:{color:"rgba(14,42,58,0.45)"},horzLines:{color:"rgba(14,42,58,0.45)"}},
-        timeScale:{borderColor:"#0e2a3a",timeVisible:true,secondsVisible:false},
-        rightPriceScale:{borderColor:"#0e2a3a"}, crosshair:{mode:0} });
-      const s=chart.addCandlestickSeries({upColor:"#22d08a",downColor:"#ff4c6e",wickUpColor:"#22d08a",wickDownColor:"#ff4c6e",borderVisible:false});
-      s.setData(q.data.map(function(b){return {time:Math.floor(new Date(b.ts).getTime()/1000),open:+b.o,high:+b.h,low:+b.l,close:+b.c};}));
-      chart.timeScale().fitContent();
-      new ResizeObserver(function(){ chart.applyOptions({width:el.clientWidth}); }).observe(el);
-    }catch(e){ el._ffDone=false; }
+      if(!_miniChart){
+        _miniChart=LightweightCharts.createChart(el,{ width:el.clientWidth, height:190,
+          layout:{background:{color:"transparent"},textColor:"#4a7a9b",fontFamily:"Share Tech Mono, monospace"},
+          grid:{vertLines:{color:"rgba(14,42,58,0.45)"},horzLines:{color:"rgba(14,42,58,0.45)"}},
+          timeScale:{borderColor:"#0e2a3a",timeVisible:true,secondsVisible:false},
+          rightPriceScale:{borderColor:"#0e2a3a"}, crosshair:{mode:0} });
+        _miniSeries=_miniChart.addCandlestickSeries({upColor:"#22d08a",downColor:"#ff4c6e",wickUpColor:"#22d08a",wickDownColor:"#ff4c6e",borderVisible:false});
+        new ResizeObserver(function(){ if(el.clientWidth) _miniChart.applyOptions({width:el.clientWidth}); }).observe(el);
+      }
+      const bars1m=q.data.map(function(b){return {time:Math.floor(new Date(b.ts).getTime()/1000),open:+b.o,high:+b.h,low:+b.l,close:+b.c};});
+      _miniSeries.setData(_miniAgg(bars1m,_miniTf));
+    }catch(e){}
   });
 }
+// Picker wiring — rebuild the series (and label) on change.
+(function(){
+  const iSel=document.getElementById("mini-chart-instr"), tSel=document.getElementById("mini-chart-tf"),
+        lbl=document.getElementById("mini-chart-sym");
+  function _tfLabel(m){ return m>=60 ? (m/60)+"h" : m+"m"; }
+  function _refresh(){ if(lbl) lbl.textContent=_miniInstr+" · "+_tfLabel(_miniTf); ffMiniChart(); }
+  if(iSel) iSel.addEventListener("change",e=>{ _miniInstr=e.target.value; _refresh(); });
+  if(tSel) tSel.addEventListener("change",e=>{ _miniTf=parseInt(e.target.value)||1; _refresh(); });
+})();
 setInterval(ffMiniChart, 1500);
 </script>
 <!-- ── COPIER TAB ENGINE (namespaced, talks to local copier on :7332) ── -->
