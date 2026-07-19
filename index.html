@@ -509,7 +509,7 @@ footer{text-align:center;font-size:10px;color:var(--muted);padding:20px 0 10px;l
           <span>📈 LIVE CHART <span id="mini-chart-sym" style="font-size:9px;color:var(--muted);margin-left:8px;">NQ · 1m</span></span>
           <span style="display:flex;gap:6px;align-items:center;">
             <select id="mini-chart-instr" style="background:var(--bg,#0a1622);color:var(--accent,#00d4ff);border:1px solid var(--border,#0e2a3a);border-radius:3px;padding:2px 6px;font-size:10px;">
-              <option value="NQ" selected>NQ</option><option value="ES">ES</option>
+              <option value="NQ" selected>NQ</option><option value="MNQ">MNQ</option><option value="ES">ES</option><option value="MES">MES</option>
             </select>
             <select id="mini-chart-tf" style="background:var(--bg,#0a1622);color:var(--accent,#00d4ff);border:1px solid var(--border,#0e2a3a);border-radius:3px;padding:2px 6px;font-size:10px;">
               <option value="1" selected>1m</option><option value="5">5m</option>
@@ -1698,6 +1698,8 @@ ffRenderPropFirms();
 // Mini live chart — Supabase-fed 1m NQ/ES bars, aggregated client-side into the
 // selected timeframe. Instrument + timeframe pickers mirror the bot Chart Studio.
 let _miniInstr="NQ", _miniTf=1, _miniChart=null, _miniSeries=null;
+// Micros track their full-size feed for price data (MNQ→NQ, MES→ES).
+function _miniBook(s){ return s==="MNQ"?"NQ":(s==="MES"?"ES":s); }
 // Aggregate 1-minute bars into `mins`-minute candles (oldest→newest in/out).
 function _miniAgg(bars, mins){
   if(!mins || mins<=1) return bars;
@@ -1716,7 +1718,7 @@ function ffMiniChart(){
   if(el.clientWidth===0) return;           /* app still hidden during launch */
   // Pull enough 1m history to fill the highest timeframe with real candles.
   const need = Math.min(1500, 180 * Math.max(1,_miniTf));
-  _sb.from("bars").select("ts,o,h,l,c").eq("symbol",_miniInstr).eq("tf","1m").order("ts",{ascending:false}).limit(need).then(function(q){
+  _sb.from("bars").select("ts,o,h,l,c").eq("symbol",_miniBook(_miniInstr)).eq("tf","1m").order("ts",{ascending:false}).limit(need).then(function(q){
     if(q&&q.data) q.data.reverse();
     if(q.error||!q.data||!q.data.length) return;
     try{

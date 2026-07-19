@@ -95,7 +95,7 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:1px;color
       <span class="tag">Chart Studio · Read-only</span>
     </div>
     <div class="controls">
-      <select class="pick" id="instr"><option value="NQ" selected>NQ</option><option value="ES">ES</option></select>
+      <select class="pick" id="instr"><option value="NQ" selected>NQ</option><option value="MNQ">MNQ</option><option value="ES">ES</option><option value="MES">MES</option></select>
       <select class="pick" id="tf"><option value="1">1m</option><option value="5" selected>5m</option><option value="15">15m</option><option value="30">30m</option><option value="60">1h</option></select>
       <a class="tbtn" href="index.html">← Dashboard</a>
       <button class="tbtn" id="themeBtn" title="Toggle theme">◐ Theme</button>
@@ -186,7 +186,7 @@ async function loadBars(){
   if(!_sb||!series) return;
   const need=Math.min(1500, 220*Math.max(1,TF));
   try{
-    const q=await _sb.from("bars").select("ts,o,h,l,c").eq("symbol",INSTR).eq("tf","1m").order("ts",{ascending:false}).limit(need);
+    const q=await _sb.from("bars").select("ts,o,h,l,c").eq("symbol",rootOf(INSTR)).eq("tf","1m").order("ts",{ascending:false}).limit(need);
     if(q.error||!q.data||!q.data.length){ msgEl.classList.add("show"); return; }
     q.data.reverse();
     const bars1m=q.data.map(b=>({time:Math.floor(new Date(b.ts).getTime()/1000),open:+b.o,high:+b.h,low:+b.l,close:+b.c}));
@@ -207,7 +207,7 @@ async function loadSignals(){
   let rows=[];
   try{ const q=await _sb.from("signals").select("id,ts,symbol,side,strategy,status,entry,t1,t2,stop,pnl").eq("published",true).order("ts",{ascending:false}).limit(40);
        if(!q.error&&q.data) rows=q.data; }catch(e){}
-  const mine=rows.filter(r=>rootOf(r.symbol)===INSTR);
+  const mine=rows.filter(r=>rootOf(r.symbol)===rootOf(INSTR));
 
   // recent list
   const list=document.getElementById("sigList");
