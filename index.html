@@ -506,10 +506,10 @@ footer{text-align:center;font-size:10px;color:var(--muted);padding:20px 0 10px;l
       <div class="card" id="mini-chart-card" style="grid-column:span 2;">
         <div class="scan-line"></div>
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>📈 LIVE CHART <span id="mini-chart-sym" style="font-size:9px;color:var(--muted);margin-left:8px;">NQ · 1m</span></span>
+          <span>📈 LIVE CHART <span id="mini-chart-sym" style="font-size:9px;color:var(--muted);margin-left:8px;">MNQ · 1m</span></span>
           <span style="display:flex;gap:6px;align-items:center;">
             <select id="mini-chart-instr" style="background:var(--bg,#0a1622);color:var(--accent,#00d4ff);border:1px solid var(--border,#0e2a3a);border-radius:3px;padding:2px 6px;font-size:10px;">
-              <option value="NQ" selected>NQ</option><option value="MNQ">MNQ</option><option value="ES">ES</option><option value="MES">MES</option>
+              <option value="MNQ" selected>MNQ</option><option value="NQ">NQ</option><option value="MES">MES</option><option value="ES">ES</option>
             </select>
             <select id="mini-chart-tf" style="background:var(--bg,#0a1622);color:var(--accent,#00d4ff);border:1px solid var(--border,#0e2a3a);border-radius:3px;padding:2px 6px;font-size:10px;">
               <option value="1" selected>1m</option><option value="5">5m</option>
@@ -1697,7 +1697,7 @@ ffRenderPropFirms();
 /* dashboard mini live-chart (mirror of Chart Studio), reads bars from Supabase */
 // Mini live chart — Supabase-fed 1m NQ/ES bars, aggregated client-side into the
 // selected timeframe. Instrument + timeframe pickers mirror the bot Chart Studio.
-let _miniInstr="NQ", _miniTf=1, _miniChart=null, _miniSeries=null;
+let _miniInstr="MNQ", _miniTf=1, _miniChart=null, _miniSeries=null;
 // Micros track their full-size feed for price data (MNQ→NQ, MES→ES).
 function _miniBook(s){ return s==="MNQ"?"NQ":(s==="MES"?"ES":s); }
 // Aggregate 1-minute bars into `mins`-minute candles (oldest→newest in/out).

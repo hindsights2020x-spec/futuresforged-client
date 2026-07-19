@@ -95,7 +95,7 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:1px;color
       <span class="tag">Chart Studio · Read-only</span>
     </div>
     <div class="controls">
-      <select class="pick" id="instr"><option value="NQ" selected>NQ</option><option value="MNQ">MNQ</option><option value="ES">ES</option><option value="MES">MES</option></select>
+      <select class="pick" id="instr"><option value="MNQ" selected>MNQ</option><option value="NQ">NQ</option><option value="MES">MES</option><option value="ES">ES</option></select>
       <select class="pick" id="tf"><option value="1">1m</option><option value="5" selected>5m</option><option value="15">15m</option><option value="30">30m</option><option value="60">1h</option></select>
       <a class="tbtn" href="index.html">← Dashboard</a>
       <button class="tbtn" id="themeBtn" title="Toggle theme">◐ Theme</button>
@@ -104,7 +104,7 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:1px;color
 
   <div class="grid">
     <div class="card">
-      <div class="card-title"><span>📈 Live Chart · Rithmic feed</span><span class="now" id="nowLbl">NQ · 5m</span></div>
+      <div class="card-title"><span>📈 Live Chart · Rithmic feed</span><span class="now" id="nowLbl">MNQ · 5m</span></div>
       <div style="position:relative;">
         <div id="chart"></div>
         <div id="chart-msg">WAITING FOR DATA…</div>
@@ -149,7 +149,7 @@ ffTheme(localStorage.getItem("ff_theme")||"dark");
 document.getElementById("themeBtn").addEventListener("click",()=>ffTheme(document.body.getAttribute("data-theme")==="light"?"dark":"light"));
 
 // ── chart state ──
-let INSTR="NQ", TF=5, chart=null, series=null, lines=[], _booted=false;
+let INSTR="MNQ", TF=5, chart=null, series=null, lines=[], _booted=false;
 const chartEl=document.getElementById("chart"), msgEl=document.getElementById("chart-msg");
 
 function themeColors(){
