@@ -1639,15 +1639,21 @@ function applyTier(tier,name){
   if(tb) tb.textContent=(tier==="elite"?"DESK":tier.toUpperCase())+(name?" · "+name:"");
   if(typeof poll==="function") poll();
 }
+// Tell the local copier which license is active so it learns its license and
+// rehydrates its portable config (Handoff #36). Fire-and-forget: the copier may
+// be offline, and this must never block or fail the dashboard.
+function activateCopier(key){
+  try{ fetch("http://localhost:7332/api/activate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({license_key:key})}).catch(function(){}); }catch(e){}
+}
 async function gateActivate(){
   const k=(document.getElementById("lic-key").value||"").trim().toUpperCase();
   const m=document.getElementById("lic-msg"); m.style.color="#4a7a9b"; m.textContent="Verifying…";
   const r=await verifyLicense(k);
-  if(r&&r.valid){ localStorage.setItem("ff_license",k); applyTier(r.tier||"starter",r.full_name); document.getElementById("license-gate").style.display="none"; }
+  if(r&&r.valid){ localStorage.setItem("ff_license",k); applyTier(r.tier||"starter",r.full_name); activateCopier(k); document.getElementById("license-gate").style.display="none"; }
   else { m.style.color="#ff4c6e"; m.textContent="Invalid or inactive license."; }
 }
 document.addEventListener("keydown",function(e){ const g=document.getElementById("license-gate"); if(e.key==="Enter"&&g&&g.style.display!=="none") gateActivate(); });
-(async function(){ const s=localStorage.getItem("ff_license"); if(s){ const r=await verifyLicense(s); if(r&&r.valid){ applyTier(r.tier||"starter",r.full_name); const g=document.getElementById("license-gate"); if(g)g.style.display="none"; } } })();
+(async function(){ const s=localStorage.getItem("ff_license"); if(s){ const r=await verifyLicense(s); if(r&&r.valid){ applyTier(r.tier||"starter",r.full_name); activateCopier(s); const g=document.getElementById("license-gate"); if(g)g.style.display="none"; } } })();
 
 /* cloud data mapped to the bot's /api/state shape (original render reused verbatim) */
 window.cloudState=async function(){
@@ -1844,7 +1850,5 @@ setInterval(ffMiniChart, 1500);
   poll(); setInterval(poll, 2000);
 })();
 </script>
-
-<script>window.addEventListener("load",function(){try{localStorage.setItem("ff_license","FF-78B6F114-BE908C6A");}catch(e){}setTimeout(function(){try{var g=document.getElementById("license-gate");if(g)g.style.display="none";applyTier("elite","Preview");}catch(e){}},300);});</script>
 </body>
 </html>
