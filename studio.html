@@ -264,7 +264,5 @@ function boot(){
   if(s){ const r=await verifyLicense(s); if(r&&r.valid){ document.getElementById("license-gate").style.display="none"; boot(); return; } }
 })();
 </script>
-<!-- Preview auto-unlock (matches index.html so ffpreview.vercel.app is viewable) -->
-<script>window.addEventListener("load",function(){try{localStorage.setItem("ff_license","FF-78B6F114-BE908C6A");}catch(e){}setTimeout(function(){try{var g=document.getElementById("license-gate");if(g)g.style.display="none";if(typeof boot==="function")boot();}catch(e){}},300);});</script>
 </body>
 </html>
