@@ -525,7 +525,7 @@ footer{text-align:center;font-size:10px;color:var(--muted);padding:20px 0 10px;l
 
         <div class="card">
           <div class="scan-line"></div>
-          <div class="card-title">📊 RECENT SIGNALS <span id="replay-label" style="font-size:9px;color:var(--muted);margin-left:8px;"></span></div>
+          <div class="card-title">📊 RECENT SIGNALS <span style="font-size:8px;letter-spacing:2px;color:var(--muted);border:1px solid var(--border);padding:1px 6px;margin-left:8px;">12H DELAYED</span><span id="replay-label" style="font-size:9px;color:var(--muted);margin-left:8px;"></span></div>
           <div id="track-record" style="font-size:10px;letter-spacing:1px;color:var(--muted);margin:-4px 0 14px;">Loading track record&hellip;</div>
           <div style="overflow-x:auto;">
             <table class="signal-table">
@@ -1630,6 +1630,8 @@ toggleRunnerField();
 /* ===== FuturesForged CLIENT layer (additive) ===== */
 const SB_URL="https://osxwkgmjwtdyvqwlfyre.supabase.co";
 const SB_KEY="sb_publishable_6Rz0VGoqTeBzVwNMs0vcCg_ev34l8kb";
+/* Public display delay: the site shows signals at least this old; live subscribers get them immediately. */
+const PUBLIC_LAG_MS=12*60*60*1000; // 12 hours
 const _sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SB_URL,SB_KEY):null;
 const TIER_RANK={starter:1,pro:2,elite:3};
 window.RANK=0; window.TIER="";
@@ -1667,7 +1669,9 @@ window.cloudState=async function(){
   Object.keys(STRAT_LABELS).forEach(function(id){ base.strategies[id]={label:STRAT_LABELS[id],enabled:true}; });
   if(!_sb) return base;
   let rows=[];
-  try{ const q=await _sb.from("signals").select("id,ts,symbol,side,strategy,status,entry,t1,t2,stop,pnl,qty").eq("published",true).order("ts",{ascending:false}).limit(30); if(!q.error&&q.data) rows=q.data; }catch(e){}
+  /* Public feed is delayed PUBLIC_LAG_MS (12h) — subscribers get the live edge, the site shows only aged signals. */
+  const _pubCut=new Date(Date.now()-PUBLIC_LAG_MS).toISOString();
+  try{ const q=await _sb.from("signals").select("id,ts,symbol,side,strategy,status,entry,t1,t2,stop,pnl,qty").eq("published",true).lte("ts",_pubCut).order("ts",{ascending:false}).limit(30); if(!q.error&&q.data) rows=q.data; }catch(e){}
   const pro=window.RANK>=2;
   const L='<span class="locktag" title="Upgrade to Pro to reveal pricing">\u{1F512} PRO</span>';
   base.signals=rows.map(function(r){
@@ -1691,7 +1695,8 @@ async function renderTrackRecord(){
   if(!el) return;
   if(!_sb){ el.style.display="none"; return; }
   try{
-    const q=await _sb.from("signals").select("pnl,outcome").eq("published",true).in("outcome",["win","loss"]);
+    const _pubCut=new Date(Date.now()-PUBLIC_LAG_MS).toISOString();
+    const q=await _sb.from("signals").select("pnl,outcome").eq("published",true).lte("ts",_pubCut).in("outcome",["win","loss"]);
     if(q.error||!q.data){ el.style.display="none"; return; }
     const rows=q.data.filter(function(r){ return r.pnl!=null; });
     const n=rows.length;
