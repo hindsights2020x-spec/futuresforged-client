@@ -526,17 +526,19 @@ footer{text-align:center;font-size:10px;color:var(--muted);padding:20px 0 10px;l
         <div class="card">
           <div class="scan-line"></div>
           <div class="card-title">📊 RECENT SIGNALS <span id="replay-label" style="font-size:9px;color:var(--muted);margin-left:8px;"></span></div>
+          <div id="track-record" style="font-size:10px;letter-spacing:1px;color:var(--muted);margin:-4px 0 14px;">Loading track record&hellip;</div>
           <div style="overflow-x:auto;">
             <table class="signal-table">
               <thead>
                 <tr>
                   <th>STATUS</th><th>DATE</th><th>TIME</th><th>STRAT</th>
+                  <th>INSTR</th><th>QTY</th>
                   <th>DIR</th><th>ENTRY</th><th>STOP</th><th>TP</th>
                   <th>R:R</th><th>SIM P&L</th>
                 </tr>
               </thead>
               <tbody id="signal-tbody">
-                <tr><td colspan="10" style="color:var(--muted);text-align:center;padding:20px;">Loading signals...</td></tr>
+                <tr><td colspan="12" style="color:var(--muted);text-align:center;padding:20px;">Loading signals...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1196,6 +1198,8 @@ function renderDashboard() {
         <td style="color:var(--muted);font-size:10px;">${date}</td>
         <td>${time}</td>
         <td style="font-size:10px;">${sg.strategy || "--"}</td>
+        <td style="color:var(--accent);font-size:10px;font-weight:700;">${sg.symbol || "--"}</td>
+        <td style="text-align:center;">${sg.qty != null ? sg.qty : "--"}</td>
         <td class="${cls}">${sg.direction}</td>
         <td>${sg.entry}</td>
         <td style="color:var(--red)">${sg.stop_price || "--"}</td>
@@ -1205,7 +1209,7 @@ function renderDashboard() {
       </tr>`;
     }).join("");
   } else {
-    tbody.innerHTML = `<tr><td colspan="10" style="color:var(--muted);text-align:center;padding:20px;">Waiting for signal replay...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" style="color:var(--muted);text-align:center;padding:20px;">Waiting for signal replay...</td></tr>`;
   }
 
   // Log
@@ -1663,13 +1667,14 @@ window.cloudState=async function(){
   Object.keys(STRAT_LABELS).forEach(function(id){ base.strategies[id]={label:STRAT_LABELS[id],enabled:true}; });
   if(!_sb) return base;
   let rows=[];
-  try{ const q=await _sb.from("signals").select("id,ts,symbol,side,strategy,status,entry,t1,t2,stop,pnl").eq("published",true).order("ts",{ascending:false}).limit(30); if(!q.error&&q.data) rows=q.data; }catch(e){}
+  try{ const q=await _sb.from("signals").select("id,ts,symbol,side,strategy,status,entry,t1,t2,stop,pnl,qty").eq("published",true).order("ts",{ascending:false}).limit(30); if(!q.error&&q.data) rows=q.data; }catch(e){}
   const pro=window.RANK>=2;
   const L='<span class="locktag" title="Upgrade to Pro to reveal pricing">\u{1F512} PRO</span>';
   base.signals=rows.map(function(r){
     const e=parseFloat(r.entry),sp=parseFloat(r.stop),tp=parseFloat(r.t1);
     let rr=(!isNaN(e)&&!isNaN(sp)&&!isNaN(tp)&&Math.abs(e-sp)>0)?(Math.abs(tp-e)/Math.abs(e-sp)).toFixed(2):"--";
     return { dt:(r.ts||"").replace("T"," "), direction:(r.side||"").toUpperCase(), status:(r.status||"").toUpperCase()||"LIVE", strategy:r.strategy,
+      symbol:(r.symbol||"").toUpperCase(), qty:(r.qty==null?1:r.qty),
       entry: pro?(r.entry==null?"--":r.entry):L, stop_price: pro?(r.stop==null?"--":r.stop):L,
       tp_price: pro?(r.t1==null?"--":r.t1):L, rr: pro?rr:L, sim_pnl: r.pnl };
   });
@@ -1677,6 +1682,31 @@ window.cloudState=async function(){
   base.log=rows.slice(0,16).map(function(r){ return {ts:(r.ts||"").slice(11,19),level:String(r.status).toLowerCase()==="executed"?"INFO":"WARN",msg:"["+(r.strategy||"?")+"] "+((r.side||"").toUpperCase())+" "+(r.symbol||"")+(r.entry!=null&&pro?" @ "+r.entry:"")}; });
   return base;
 };
+
+/* Public track-record summary — aggregate of ALL published resolved signals
+   (simulated, 1 contract). Non-gated: this is the credibility proof; per-signal
+   entries/P&L stay Pro. */
+async function renderTrackRecord(){
+  const el=document.getElementById("track-record");
+  if(!el) return;
+  if(!_sb){ el.style.display="none"; return; }
+  try{
+    const q=await _sb.from("signals").select("pnl,outcome").eq("published",true).in("outcome",["win","loss"]);
+    if(q.error||!q.data){ el.style.display="none"; return; }
+    const rows=q.data.filter(function(r){ return r.pnl!=null; });
+    const n=rows.length;
+    if(!n){ el.style.display="none"; return; }
+    const wins=rows.filter(function(r){ return r.outcome==="win"; }).length;
+    const net=rows.reduce(function(a,r){ return a+Number(r.pnl); },0);
+    const netStr=(net>=0?"+":"−")+"$"+Math.abs(Math.round(net));
+    el.innerHTML='<span style="color:var(--muted);">TRACK RECORD</span> '
+      +'<span style="color:var(--muted);">(simulated · 1 contract):</span> '
+      +'<b style="color:var(--text);">'+n+'</b> trades · '
+      +'<b style="color:var(--text);">'+Math.round(wins/n*100)+'%</b> win · '
+      +'<b style="color:'+(net>=0?"var(--green)":"var(--red)")+';">'+netStr+'</b> net';
+  }catch(e){ el.style.display="none"; }
+}
+renderTrackRecord();
 
 /* appearance (kept in the existing Settings tab footer) */
 function ffTheme(t){ document.body.setAttribute("data-theme",t); localStorage.setItem("ff_theme",t); }
