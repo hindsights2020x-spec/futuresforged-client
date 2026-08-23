@@ -525,7 +525,7 @@ footer{text-align:center;font-size:10px;color:var(--muted);padding:20px 0 10px;l
 
         <div class="card">
           <div class="scan-line"></div>
-          <div class="card-title">📊 RECENT SIGNALS <span style="font-size:8px;letter-spacing:2px;color:var(--muted);border:1px solid var(--border);padding:1px 6px;margin-left:8px;">12H DELAYED</span><span id="replay-label" style="font-size:9px;color:var(--muted);margin-left:8px;"></span></div>
+          <div class="card-title">📊 RECENT SIGNALS <span style="font-size:8px;letter-spacing:2px;color:var(--muted);border:1px solid var(--border);padding:1px 6px;margin-left:8px;">4H DELAYED</span><span id="replay-label" style="font-size:9px;color:var(--muted);margin-left:8px;"></span></div>
           <div id="track-record" style="font-size:10px;letter-spacing:1px;color:var(--muted);margin:-4px 0 14px;">Loading track record&hellip;</div>
           <div style="overflow-x:auto;">
             <table class="signal-table">
@@ -1631,7 +1631,7 @@ toggleRunnerField();
 const SB_URL="https://osxwkgmjwtdyvqwlfyre.supabase.co";
 const SB_KEY="sb_publishable_6Rz0VGoqTeBzVwNMs0vcCg_ev34l8kb";
 /* Public display delay: the site shows signals at least this old; live subscribers get them immediately. */
-const PUBLIC_LAG_MS=12*60*60*1000; // 12 hours
+const PUBLIC_LAG_MS=4*60*60*1000; // 4 hours
 const _sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SB_URL,SB_KEY):null;
 const TIER_RANK={starter:1,pro:2,elite:3};
 window.RANK=0; window.TIER="";
