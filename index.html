@@ -1804,10 +1804,27 @@ setInterval(ffMiniChart, 1500);
     }catch(e){ offline(true); }
   }
   function offline(b){ const o=$("cp-offline"); if(o) o.style.display=b?"block":"none"; }
+  // Prop-firm policy: the copier answers 409 {code, reason, disclaimers,
+  // required_acks} when an account can't join the copy routes (Tradeify next to
+  // another prop firm) or a firm's rules must be accepted first.
+  function policyText(d){
+    let t=(d.reason||d.msg||"")+"\n";
+    for(const x of (d.disclaimers||[])){
+      t+="\n"+x.title+"\n"+(x.points||[]).map(p=>" - "+p).join("\n")
+        +"\n Source (checked "+(x.checked||"")+"): "+(x.sources||[]).join(" , ")+"\n";
+    }
+    return t;
+  }
   async function post(path, body){
-    const r = await fetch(`${API}${path}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});
-    const d = await r.json().catch(()=>({}));
-    if(d && d.ok===false && d.msg) alert(d.msg);
+    const send = async b => { const r = await fetch(`${API}${path}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b||{})});
+                               return await r.json().catch(()=>({})); };
+    let d = await send(body);
+    if(d && d.code==="ACK_REQUIRED"){
+      if(confirm(policyText(d)+"\nPress OK to confirm you have read and accept these rules."))
+        d = await send(Object.assign({}, body||{}, {acks: d.required_acks||[]}));
+    } else if(d && d.code==="TRADEIFY_EXCLUSIVE"){
+      alert("NOT ALLOWED\n\n"+policyText(d));
+    } else if(d && d.ok===false && d.msg) alert(d.msg);
     await poll(); return d;
   }
   function assigned(){ const s=new Set(); (S.groups||[]).forEach(g=>{if(g.master)s.add(g.master);Object.keys(g.subs||{}).forEach(k=>s.add(k));}); return s; }
